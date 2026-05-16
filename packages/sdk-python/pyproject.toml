@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stethoscope-py"
+version = "0.1.0"
+description = "One-line instrumentation for LLM agents — feeds the Stethoscope time-travel debugger"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Paavan Sejpal" }]
+keywords = ["llm", "agents", "langgraph", "opentelemetry", "debugging"]
+dependencies = [
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.27",
+]
+
+[project.optional-dependencies]
+langgraph = ["langgraph>=0.2"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/paavan/stethoscope"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stethoscope"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

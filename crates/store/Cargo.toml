@@ -1,0 +1,25 @@
+[package]
+name = "stethoscope-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+# `bundled` compiles DuckDB from C++ source (heavy, needs a C++ compiler).
+# Off by default: link a prebuilt libduckdb via DUCKDB_LIB_DIR/DUCKDB_INCLUDE_DIR.
+default = []
+bundled = ["duckdb/bundled"]
+
+[dependencies]
+duckdb = { workspace = true, features = ["chrono"] }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

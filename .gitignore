@@ -1,0 +1,40 @@
+# Rust
+/target
+**/target
+Cargo.lock.orig
+
+# Node
+node_modules
+dist
+.pnpm-store
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Tauri
+apps/desktop/src-tauri/target
+apps/desktop/src-tauri/gen
+
+# Stethoscope local data
+.stethoscope/
+*.duckdb
+*.duckdb.wal
+*.parquet
+
+# Toolchain (portable, not committed)
+/.toolchain/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

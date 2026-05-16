@@ -1,0 +1,6 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+# Host target is selected at install time. On Windows without MSVC build
+# tools, install with the GNU host:
+#   rustup default stable-x86_64-pc-windows-gnu

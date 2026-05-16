@@ -1,0 +1,30 @@
+[package]
+name = "stethoscope-ingestion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "stethoscope_ingestion"
+path = "src/lib.rs"
+
+[[bin]]
+name = "stethoscope-ingestion"
+path = "src/main.rs"
+
+[dependencies]
+stethoscope-store = { workspace = true }
+opentelemetry-proto = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+hex = { workspace = true }
+ulid = { workspace = true }

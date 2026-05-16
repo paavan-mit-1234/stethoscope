@@ -1,0 +1,20 @@
+{
+  "name": "stethoscope",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A time-travel debugger for LangGraph agents",
+  "license": "MIT",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @stethoscope/desktop dev",
+    "build": "pnpm --filter @stethoscope/desktop build",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@stethoscope/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React frontend for The Workbench (Phase 2). Hand-rolled CSS, no UI library.",
+  "scripts": {
+    "build": "echo \"Phase 2: UI not yet scaffolded\" && exit 0"
+  }
+}

@@ -1,0 +1,55 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/store",
+    "crates/ingestion",
+    "crates/replay",
+    "crates/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Paavan Sejpal"]
+repository = "https://github.com/paavan/stethoscope"
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Core
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
+ulid = "1"
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+hex = "0.4"
+
+# gRPC / OTLP
+tonic = "0.12"
+prost = "0.13"
+opentelemetry-proto = { version = "0.27", features = ["gen-tonic", "trace"] }
+
+# Storage
+duckdb = { version = "1.1" }
+arrow = "53"
+parquet = "53"
+zstd = "0.13"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+comfy-table = "7"
+
+# Internal crates
+stethoscope-store = { path = "crates/store" }
+stethoscope-ingestion = { path = "crates/ingestion" }
+stethoscope-replay = { path = "crates/replay" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
