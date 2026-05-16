@@ -12,7 +12,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["Paavan Sejpal"]
-repository = "https://github.com/paavan/stethoscope"
+repository = "https://github.com/paavan-mit-1234/stethoscope"
 rust-version = "1.75"
 
 [workspace.dependencies]

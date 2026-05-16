@@ -22,7 +22,7 @@ langgraph = ["langgraph>=0.2"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.urls]
-Homepage = "https://github.com/paavan/stethoscope"
+Homepage = "https://github.com/paavan-mit-1234/stethoscope"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/stethoscope"]
