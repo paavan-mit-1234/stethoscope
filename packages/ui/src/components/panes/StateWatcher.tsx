@@ -10,7 +10,9 @@ export function StateWatcher() {
         <div className="sunken" style={{ padding: 4, color: "var(--chrome-dark)" }}>
           ⬜⬜⬜⬜⬜⬜⬜&nbsp;&nbsp;history scrubber
         </div>
-        <div className="empty" style={{ flex: 1 }}>(no state captured)</div>
+        <div className="empty" style={{ flex: 1 }}>
+          (no state captured)
+        </div>
         <div className="pane-title" style={{ background: "var(--chrome)", color: "var(--ink)" }}>
           WATCH EXPRESSIONS
         </div>

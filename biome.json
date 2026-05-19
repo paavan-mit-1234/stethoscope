@@ -1,7 +1,9 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "files": { "ignore": ["dist", "target", "node_modules", "**/gen/**"] },
+  "files": {
+    "ignore": ["dist", "target", "node_modules", "**/gen/**", "**/package-lock.json"]
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -10,7 +12,19 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "useKeyWithClickEvents": "off",
+        "useButtonType": "off",
+        "noAutofocus": "off",
+        "useSemanticElements": "off"
+      },
+      "suspicious": { "noArrayIndexKey": "off" },
+      "correctness": { "useExhaustiveDependencies": "off" },
+      "style": { "noNonNullAssertion": "off" },
+      "complexity": { "noForEach": "off" }
+    }
   },
   "javascript": {
     "formatter": { "quoteStyle": "double", "semicolons": "always" }

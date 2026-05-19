@@ -57,10 +57,7 @@ export function CommandBar() {
       <div className="pane-title">
         <span>COMMAND</span>
       </div>
-      <div
-        className="pane-body"
-        style={{ display: "flex", flexDirection: "column", padding: 4 }}
-      >
+      <div className="pane-body" style={{ display: "flex", flexDirection: "column", padding: 4 }}>
         <div style={{ flex: 1, overflow: "auto" }}>
           {scrollback.map((l, i) => (
             <div key={i} style={{ color: COLOR[l.kind], whiteSpace: "pre-wrap" }}>

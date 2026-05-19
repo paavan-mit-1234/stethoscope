@@ -5,9 +5,7 @@
 // apps/desktop/src-tauri/src/commands.rs exactly, so the swap is localized
 // to `call()` below (detect window.__TAURI__, use invoke()).
 
-const BASE =
-  (import.meta.env.VITE_STETH_API as string | undefined) ??
-  "http://127.0.0.1:4318";
+const BASE = (import.meta.env.VITE_STETH_API as string | undefined) ?? "http://127.0.0.1:4318";
 
 export type Project = { id: string; name: string };
 
@@ -101,8 +99,7 @@ export const api = {
   getSpans: (traceId: string) => get<Span[]>(`/traces/${traceId}/spans`),
   getSpan: (spanId: string) => get<Span | null>(`/spans/${spanId}`),
   getMessages: (spanId: string) => get<Message[]>(`/spans/${spanId}/messages`),
-  getToolCall: (spanId: string) =>
-    get<ToolCall | null>(`/spans/${spanId}/tool_call`),
+  getToolCall: (spanId: string) => get<ToolCall | null>(`/spans/${spanId}/tool_call`),
 
   listBreakpoints: () => get<Breakpoint[]>("/breakpoints"),
 
@@ -126,8 +123,7 @@ export const api = {
     });
   },
 
-  exportTrace: (traceId: string) =>
-    get<Record<string, unknown>>(`/traces/${traceId}/export`),
+  exportTrace: (traceId: string) => get<Record<string, unknown>>(`/traces/${traceId}/export`),
 
   branch: async (body: {
     source_trace_id: string;

@@ -11,16 +11,12 @@ export type SpanRowVM = {
   hasChildren: boolean;
 };
 
-export function buildSpanRows(
-  spans: Span[],
-  collapsed: ReadonlySet<string>,
-): SpanRowVM[] {
+export function buildSpanRows(spans: Span[], collapsed: ReadonlySet<string>): SpanRowVM[] {
   const childrenOf = new Map<string | null, Span[]>();
   const ids = new Set(spans.map((s) => s.id));
   for (const s of spans) {
     // a parent outside the set (shouldn't happen) is treated as a root
-    const key =
-      s.parent_span_id && ids.has(s.parent_span_id) ? s.parent_span_id : null;
+    const key = s.parent_span_id && ids.has(s.parent_span_id) ? s.parent_span_id : null;
     const arr = childrenOf.get(key);
     if (arr) arr.push(s);
     else childrenOf.set(key, [s]);
@@ -48,8 +44,7 @@ export function buildSpanRows(
 // Single-char colored glyph per PRD 8.5.1.
 export function spanGlyph(s: Span): { ch: string; color: string } {
   if (s.status === "error") return { ch: "★", color: "var(--signal-red)" };
-  if (s.cacheable && (s.tokens_cached ?? 0) > 0)
-    return { ch: "◐", color: "var(--signal-green)" };
+  if (s.cacheable && (s.tokens_cached ?? 0) > 0) return { ch: "◐", color: "var(--signal-green)" };
   switch (s.kind) {
     case "llm_call":
       return { ch: "◆", color: "var(--signal-blue)" };

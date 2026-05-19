@@ -73,9 +73,7 @@ export function parseCommand(line: string): Command {
     case "bt":
       return { t: "where" };
     case "print":
-      return rest
-        ? { t: "print", expr: rest }
-        : { t: "error", msg: "print: missing expression" };
+      return rest ? { t: "print", expr: rest } : { t: "error", msg: "print: missing expression" };
     case "break":
       return need("break", "predicate");
     case "delete":

@@ -8,13 +8,11 @@ function childrenMap(spans: Span[]): Map<string | null, Span[]> {
   const ids = new Set(spans.map((s) => s.id));
   const m = new Map<string | null, Span[]>();
   for (const s of spans) {
-    const key =
-      s.parent_span_id && ids.has(s.parent_span_id) ? s.parent_span_id : null;
+    const key = s.parent_span_id && ids.has(s.parent_span_id) ? s.parent_span_id : null;
     (m.get(key) ?? m.set(key, []).get(key)!).push(s);
   }
   const cmp = (a: Span, b: Span) =>
-    (a.started_at ?? "").localeCompare(b.started_at ?? "") ||
-    a.id.localeCompare(b.id);
+    (a.started_at ?? "").localeCompare(b.started_at ?? "") || a.id.localeCompare(b.id);
   for (const arr of m.values()) arr.sort(cmp);
   return m;
 }
@@ -51,9 +49,7 @@ export function pathTo(spans: Span[], id: string): Span[] {
   while (cur && !seen.has(cur.id)) {
     seen.add(cur.id);
     out.unshift(cur);
-    cur = cur.parent_span_id
-      ? spans.find((s) => s.id === cur!.parent_span_id) ?? null
-      : null;
+    cur = cur.parent_span_id ? (spans.find((s) => s.id === cur!.parent_span_id) ?? null) : null;
   }
   return out;
 }
@@ -71,9 +67,7 @@ export function step(
 
   if (kind === "next") {
     if (i < 0) return { id: order[0].id };
-    return i + 1 < order.length
-      ? { id: order[i + 1].id }
-      : { msg: "(end of trace)" };
+    return i + 1 < order.length ? { id: order[i + 1].id } : { msg: "(end of trace)" };
   }
   if (kind === "prev") {
     if (i < 0) return { id: order[0].id };
@@ -84,9 +78,7 @@ export function step(
     const c = firstChild(spans, current!);
     if (c) return { id: c.id };
     // no child: behaves like `next` (gdb steps to the next line)
-    return i + 1 < order.length
-      ? { id: order[i + 1].id }
-      : { msg: "(end of trace)" };
+    return i + 1 < order.length ? { id: order[i + 1].id } : { msg: "(end of trace)" };
   }
   // finish: step out to parent
   if (i < 0 || !current) return { msg: "(no current span)" };

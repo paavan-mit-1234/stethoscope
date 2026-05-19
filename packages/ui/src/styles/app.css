@@ -1,8 +1,17 @@
 /* Global shell styles. Density is a feature (PRD 8.1). Crisp, not smooth. */
 
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-html, body, #root { height: 100%; margin: 0; }
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
 
 body {
   font-family: var(--mono);
@@ -10,18 +19,24 @@ body {
   line-height: var(--lh);
   color: var(--ink);
   background: var(--window-bg);
-  -webkit-font-smoothing: none;       /* crisp, not anti-aliased */
-  font-smooth: never;
+  -webkit-font-smoothing: none; /* crisp, not anti-aliased */
   text-rendering: optimizeSpeed;
   cursor: default;
   user-select: none;
 }
 
 /* Selection = Windows 2000 blue */
-::selection { background: var(--selection); color: var(--selection-text); }
+::selection {
+  background: var(--selection);
+  color: var(--selection-text);
+}
 
 /* Blocky beveled scrollbars, never thin/rounded */
-::-webkit-scrollbar { width: 16px; height: 16px; background: var(--chrome); }
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+  background: var(--chrome);
+}
 ::-webkit-scrollbar-thumb {
   background: var(--chrome);
   border: 1px solid;
@@ -35,7 +50,9 @@ body {
   height: 16px;
   width: 16px;
 }
-::-webkit-scrollbar-corner { background: var(--chrome); }
+::-webkit-scrollbar-corner {
+  background: var(--chrome);
+}
 
 /* ---- App frame -------------------------------------------------------- */
 .app {
@@ -64,10 +81,17 @@ body {
   font-size: 10px;
   letter-spacing: 1px;
 }
-.titlebar .t-title { padding: 0 6px; flex: 1; }
-.titlebar .t-btns { display: flex; gap: 2px; }
+.titlebar .t-title {
+  padding: 0 6px;
+  flex: 1;
+}
+.titlebar .t-btns {
+  display: flex;
+  gap: 2px;
+}
 .titlebar .t-btn {
-  width: 18px; height: 16px;
+  width: 18px;
+  height: 16px;
   background: var(--chrome);
   color: var(--ink);
   font-family: var(--mono);
@@ -75,7 +99,9 @@ body {
   line-height: 14px;
   text-align: center;
 }
-.titlebar .t-btn:active { transform: translate(1px, 1px); }
+.titlebar .t-btn:active {
+  transform: translate(1px, 1px);
+}
 
 /* ---- Menu bar -------------------------------------------------------- */
 .menubar {
@@ -101,14 +127,24 @@ body {
   background: var(--chrome);
   padding: 3px 4px;
 }
-.toolbar .grp { display: flex; gap: 2px; }
+.toolbar .grp {
+  display: flex;
+  gap: 2px;
+}
 .toolbar .divider {
-  width: 0; height: 18px; margin: 0 4px;
+  width: 0;
+  height: 18px;
+  margin: 0 4px;
   border-left: 1px solid var(--chrome-dark);
   border-right: 1px solid var(--hi);
 }
-.toolbar .spacer { flex: 1; }
-.toolbar .proj { font-size: var(--fs-s); padding: 0 4px; }
+.toolbar .spacer {
+  flex: 1;
+}
+.toolbar .proj {
+  font-size: var(--fs-s);
+  padding: 0 4px;
+}
 
 .btn {
   background: var(--chrome);
@@ -120,12 +156,16 @@ body {
   border-width: 1px;
   border-color: var(--hi) var(--chrome-dark) var(--chrome-dark) var(--hi);
 }
-.btn:hover { border-color: var(--ink); }
+.btn:hover {
+  border-color: var(--ink);
+}
 .btn:active {
   border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
   transform: translate(1px, 1px);
 }
-.btn[disabled] { color: var(--chrome-dark); }
+.btn[disabled] {
+  color: var(--chrome-dark);
+}
 
 /* ---- Workbench body / panes ----------------------------------------- */
 .body {
@@ -134,7 +174,11 @@ body {
   flex-direction: column;
   min-height: 0;
 }
-.cols { flex: 1; display: flex; min-height: 0; }
+.cols {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
 .pane {
   background: var(--chrome);
   display: flex;
@@ -167,9 +211,20 @@ body {
 }
 
 /* drag handles: 3px, no animation (PRD 8.4) */
-.splitter-v { width: 3px; cursor: col-resize; background: var(--chrome); }
-.splitter-h { height: 3px; cursor: row-resize; background: var(--chrome); }
-.splitter-v:active, .splitter-h:active { background: var(--chrome-dark); }
+.splitter-v {
+  width: 3px;
+  cursor: col-resize;
+  background: var(--chrome);
+}
+.splitter-h {
+  height: 3px;
+  cursor: row-resize;
+  background: var(--chrome);
+}
+.splitter-v:active,
+.splitter-h:active {
+  background: var(--chrome-dark);
+}
 
 /* ---- Status bar ------------------------------------------------------ */
 .statusbar {
@@ -188,6 +243,12 @@ body {
   border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
   margin: 1px;
 }
-.statusbar .grow { flex: 1; }
-.led { color: var(--signal-green); }
-.led.idle { color: var(--chrome-dark); }
+.statusbar .grow {
+  flex: 1;
+}
+.led {
+  color: var(--signal-green);
+}
+.led.idle {
+  color: var(--chrome-dark);
+}

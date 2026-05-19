@@ -48,8 +48,7 @@ function lex(src: string): Tok[] {
       t.push({ k: "op", v: op });
     } else {
       let w = "";
-      while (i < src.length && !/\s/.test(src[i]) && !"()='\"!<>".includes(src[i]))
-        w += src[i++];
+      while (i < src.length && !/\s/.test(src[i]) && !"()='\"!<>".includes(src[i])) w += src[i++];
       const lw = w.toLowerCase();
       if (lw === "and") t.push({ k: "and" });
       else if (lw === "or") t.push({ k: "or" });
@@ -57,8 +56,7 @@ function lex(src: string): Tok[] {
       else if (lw === "contains") t.push({ k: "op", v: "contains" });
       else if (lw === "true") t.push({ k: "bool", v: true });
       else if (lw === "false") t.push({ k: "bool", v: false });
-      else if (w !== "" && !Number.isNaN(Number(w)))
-        t.push({ k: "num", v: Number(w) });
+      else if (w !== "" && !Number.isNaN(Number(w))) t.push({ k: "num", v: Number(w) });
       else t.push({ k: "id", v: w });
     }
   }
@@ -129,8 +127,7 @@ export function parsePredicate(src: string): Expr {
 function cmp(a: Val, op: string, b: Val): boolean {
   if (op === "==") return a === b;
   if (op === "!=") return a !== b;
-  if (op === "contains")
-    return typeof a === "string" && typeof b === "string" && a.includes(b);
+  if (op === "contains") return typeof a === "string" && typeof b === "string" && a.includes(b);
   if (typeof a !== "number" || typeof b !== "number") return false;
   if (op === ">") return a > b;
   if (op === "<") return a < b;

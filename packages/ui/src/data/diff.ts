@@ -12,10 +12,7 @@ const key = (s: Span) => `${s.kind} ${s.name}`;
 
 // Replay bookkeeping is set on branch roots, not a meaningful divergence —
 // ignore it so "first divergence" lands on the real change.
-const IGNORE = new Set([
-  "stethoscope.parent_trace_id",
-  "stethoscope.branch_point_span_id",
-]);
+const IGNORE = new Set(["stethoscope.parent_trace_id", "stethoscope.branch_point_span_id"]);
 
 function attrsKey(json: string | null): string {
   if (!json) return "";
@@ -36,8 +33,7 @@ function attrsKey(json: string | null): string {
 }
 
 const diverged = (a: Span, b: Span) =>
-  a.status !== b.status ||
-  attrsKey(a.attributes_json) !== attrsKey(b.attributes_json);
+  a.status !== b.status || attrsKey(a.attributes_json) !== attrsKey(b.attributes_json);
 
 export function alignSpans(aSpans: Span[], bSpans: Span[]): AlignedPair[] {
   const a = preorder(aSpans);
@@ -45,15 +41,11 @@ export function alignSpans(aSpans: Span[], bSpans: Span[]): AlignedPair[] {
   const n = a.length;
   const m = b.length;
   // LCS DP on (kind,name).
-  const dp: number[][] = Array.from({ length: n + 1 }, () =>
-    new Array(m + 1).fill(0),
-  );
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
       dp[i][j] =
-        key(a[i]) === key(b[j])
-          ? dp[i + 1][j + 1] + 1
-          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        key(a[i]) === key(b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
   }
   const out: AlignedPair[] = [];
@@ -93,15 +85,10 @@ export function wordDiff(a: string, b: string): Seg[] {
   const bw = b.split(/(\s+)/).filter((x) => x !== "");
   const n = aw.length;
   const m = bw.length;
-  const dp: number[][] = Array.from({ length: n + 1 }, () =>
-    new Array(m + 1).fill(0),
-  );
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--)
     for (let j = m - 1; j >= 0; j--)
-      dp[i][j] =
-        aw[i] === bw[j]
-          ? dp[i + 1][j + 1] + 1
-          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      dp[i][j] = aw[i] === bw[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
 
   const segs: Seg[] = [];
   const push = (op: Seg["op"], text: string) => {

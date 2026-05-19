@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type Span } from "../../data/api";
+import { type Span, api } from "../../data/api";
 import { firstDivergence, wordDiff } from "../../data/diff";
 import { useStore } from "../../store";
 
@@ -63,10 +63,7 @@ export function DiffView() {
           DIFF&nbsp;&nbsp;{aLabel}&nbsp;&nbsp;⇄&nbsp;&nbsp;{bLabel}
         </span>
         <span>
-          <button
-            className="btn"
-            onClick={() => setDiffSel(Math.max(0, firstDivergence(pairs)))}
-          >
+          <button className="btn" onClick={() => setDiffSel(Math.max(0, firstDivergence(pairs)))}>
             ⌖ first divergence
           </button>{" "}
           <button className="btn" onClick={closeDiff}>
@@ -74,7 +71,10 @@ export function DiffView() {
           </button>
         </span>
       </div>
-      <div className="pane-body" style={{ marginTop: 0, padding: 0, display: "flex", flexDirection: "column" }}>
+      <div
+        className="pane-body"
+        style={{ marginTop: 0, padding: 0, display: "flex", flexDirection: "column" }}
+      >
         <div style={{ flex: 1, overflow: "auto" }}>
           {pairs.map((p, i) => {
             const onSel = i === sel;
@@ -96,11 +96,8 @@ export function DiffView() {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     background:
-                      p.kind === "removed" || p.kind === "changed"
-                        ? ROW_BG[p.kind]
-                        : "transparent",
-                    color:
-                      p.kind === "removed" ? "var(--selection-text)" : undefined,
+                      p.kind === "removed" || p.kind === "changed" ? ROW_BG[p.kind] : "transparent",
+                    color: p.kind === "removed" ? "var(--selection-text)" : undefined,
                   }}
                 >
                   {half(p.a)}
@@ -114,11 +111,8 @@ export function DiffView() {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     background:
-                      p.kind === "added" || p.kind === "changed"
-                        ? ROW_BG[p.kind]
-                        : "transparent",
-                    color:
-                      p.kind === "added" ? "var(--selection-text)" : undefined,
+                      p.kind === "added" || p.kind === "changed" ? ROW_BG[p.kind] : "transparent",
+                    color: p.kind === "added" ? "var(--selection-text)" : undefined,
                   }}
                 >
                   {half(p.b)}
@@ -129,7 +123,13 @@ export function DiffView() {
         </div>
         <div
           className="sunken"
-          style={{ height: 120, margin: 2, background: "var(--canvas)", overflow: "auto", padding: 4 }}
+          style={{
+            height: 120,
+            margin: 2,
+            background: "var(--canvas)",
+            overflow: "auto",
+            padding: 4,
+          }}
         >
           <div style={{ color: "var(--chrome-dark)" }}>
             why diverged — token diff of selected pair:

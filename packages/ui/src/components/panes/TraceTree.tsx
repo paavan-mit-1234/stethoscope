@@ -33,8 +33,7 @@ export function TraceTree() {
   const heat = useMemo(() => {
     const m = new Map<string, string>();
     if (heatmap === "off") return m;
-    const val = (sp: (typeof spans)[number]) =>
-      heatmap === "lat" ? sp.duration_ms : sp.cost_usd;
+    const val = (sp: (typeof spans)[number]) => (heatmap === "lat" ? sp.duration_ms : sp.cost_usd);
     const vals = spans
       .map(val)
       .filter((v): v is number => typeof v === "number" && v > 0)
@@ -93,9 +92,7 @@ export function TraceTree() {
   // be virtualized out of the DOM, so scroll by computed index).
   useEffect(() => {
     if (!selectedSpanId || !boxRef.current) return;
-    const idx = rows.findIndex(
-      (r) => r.kind === "span" && r.id === selectedSpanId,
-    );
+    const idx = rows.findIndex((r) => r.kind === "span" && r.id === selectedSpanId);
     if (idx < 0) return;
     const box = boxRef.current;
     const top = idx * ROW_H;
@@ -131,17 +128,13 @@ export function TraceTree() {
         onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}
       >
         {rows.length === 0 ? (
-          <div className="empty">
-            (no traces yet — run an instrumented agent to begin)
-          </div>
+          <div className="empty">(no traces yet — run an instrumented agent to begin)</div>
         ) : (
           <div style={{ height: rows.length * ROW_H, position: "relative" }}>
             {slice.map((r, i) => {
               const idx = start + i;
               const isSel =
-                r.kind === "span"
-                  ? r.selected
-                  : r.id === selectedTraceId && !selectedSpanId;
+                r.kind === "span" ? r.selected : r.id === selectedTraceId && !selectedSpanId;
               return (
                 <div
                   key={`${r.kind}:${r.id}:${idx}`}
@@ -203,9 +196,7 @@ export function TraceTree() {
                   ) : (
                     <>
                       <span style={{ color: "var(--chrome-dark)" }}>{r.prefix}</span>
-                      <span style={{ color: isSel ? undefined : r.glyph.color }}>
-                        {r.glyph.ch}
-                      </span>{" "}
+                      <span style={{ color: isSel ? undefined : r.glyph.color }}>{r.glyph.ch}</span>{" "}
                       {r.name}
                     </>
                   )}
@@ -215,8 +206,16 @@ export function TraceTree() {
           </div>
         )}
       </div>
-      <div style={{ color: "var(--chrome-dark)", fontSize: 12, padding: 4, background: "var(--chrome)" }}>
-        ◆ llm&nbsp;&nbsp;▣ tool&nbsp;&nbsp;● node&nbsp;&nbsp;★ error&nbsp;&nbsp;⟲ branch&nbsp;&nbsp;◐ cache
+      <div
+        style={{
+          color: "var(--chrome-dark)",
+          fontSize: 12,
+          padding: 4,
+          background: "var(--chrome)",
+        }}
+      >
+        ◆ llm&nbsp;&nbsp;▣ tool&nbsp;&nbsp;● node&nbsp;&nbsp;★ error&nbsp;&nbsp;⟲
+        branch&nbsp;&nbsp;◐ cache
       </div>
       <div style={{ padding: 2, background: "var(--chrome)" }}>
         <input

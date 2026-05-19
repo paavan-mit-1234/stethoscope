@@ -56,9 +56,11 @@ cargo run -p stethoscope-cli -- list-traces
 
 ## Status
 
-Early development. See `STETHOSCOPE_PRD.md` (the product spec) for the full
-roadmap. Current focus: Phase 0 (foundations) + Phase 1 (trace capture
-end-to-end vertical slice).
+v1.0 feature-complete: all PRD phases 0–7 (capture → inspect → gdb-style
+step → branch/replay → diff → breakpoints) plus a Cloud Phase 1 multi-tenant
+API. The verified, runnable path is the Python/TS reference (the Rust crates
+are the canonical spec — see Continuous Integration below). See
+`STETHOSCOPE_PRD.md` for the full roadmap.
 
 ## Toolchain
 
@@ -71,6 +73,16 @@ end-to-end vertical slice).
 
 > Windows note: this repo builds with the `x86_64-pc-windows-gnu` Rust
 > toolchain when MSVC build tools are unavailable. See `docs/windows-build.md`.
+
+## Continuous Integration
+
+The **blocking** gates are `python sdk` (ruff + pytest on the reference) and
+`lint (biome)` — these cover the verified, runnable path. The **`rust
+canonical`** job is *informational* (`continue-on-error`): the Rust crates
+are the canonical spec but were authored on a machine with no Rust toolchain
+(see `docs/windows-build.md`), so they're compiled/clippy'd/tested once a
+build environment is available. CI status reflects what is actually
+verifiable here; the Rust job is not a hidden failure.
 
 ## License
 

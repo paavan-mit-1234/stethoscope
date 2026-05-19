@@ -15,9 +15,7 @@ export function StatusBar() {
       <span className="cell">
         <span className={connected ? "led" : "led idle"}>⬤</span>
         &nbsp;
-        {connected
-          ? `connected · ${traces.length} trace(s)`
-          : "ingestion offline (127.0.0.1:4318)"}
+        {connected ? `connected · ${traces.length} trace(s)` : "ingestion offline (127.0.0.1:4318)"}
       </span>
       {bpHit && (
         <span className="cell" style={{ color: "var(--signal-red)" }}>

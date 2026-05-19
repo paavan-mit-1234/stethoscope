@@ -30,10 +30,5 @@ export function Splitter({
     window.addEventListener("pointerup", stop);
   }, [onMove, stop]);
 
-  return (
-    <div
-      className={axis === "v" ? "splitter-v" : "splitter-h"}
-      onPointerDown={start}
-    />
-  );
+  return <div className={axis === "v" ? "splitter-v" : "splitter-h"} onPointerDown={start} />;
 }

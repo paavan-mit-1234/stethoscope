@@ -113,7 +113,14 @@ export function Inspector() {
               <tbody>
                 {Object.entries(attributes).map(([k, v]) => (
                   <tr key={k}>
-                    <td style={{ color: "var(--signal-blue)", verticalAlign: "top", padding: "1px 8px 1px 0", whiteSpace: "nowrap" }}>
+                    <td
+                      style={{
+                        color: "var(--signal-blue)",
+                        verticalAlign: "top",
+                        padding: "1px 8px 1px 0",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {k}
                     </td>
                     <td style={{ wordBreak: "break-word" }}>
@@ -147,7 +154,9 @@ export function Inspector() {
           <span>${(span.cost_usd ?? 0).toFixed(4)}</span>
           <span>{span.duration_ms ?? 0}ms</span>
           {span.model && <span>{span.model}</span>}
-          <span style={{ color: span.status === "error" ? "var(--signal-red)" : "var(--signal-green)" }}>
+          <span
+            style={{ color: span.status === "error" ? "var(--signal-red)" : "var(--signal-green)" }}
+          >
             {span.status}
           </span>
         </div>

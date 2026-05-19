@@ -54,10 +54,9 @@ export function BranchModal() {
 
         <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
           <div>
-            Replay from tool span{" "}
-            <b>{bm.toolName ?? "?"}</b> with one mutated input. Everything else
-            is pinned (LLM via cache, other tools snapshotted) so the only
-            variable is your edit.
+            Replay from tool span <b>{bm.toolName ?? "?"}</b> with one mutated input. Everything
+            else is pinned (LLM via cache, other tools snapshotted) so the only variable is your
+            edit.
           </div>
 
           <fieldset className="sunken" style={{ border: "1px solid", padding: 6 }}>
@@ -70,12 +69,7 @@ export function BranchModal() {
                   color: enabled ? "var(--ink)" : "var(--chrome-dark)",
                 }}
               >
-                <input
-                  type="radio"
-                  name="mut"
-                  defaultChecked={enabled}
-                  disabled={!enabled}
-                />{" "}
+                <input type="radio" name="mut" defaultChecked={enabled} disabled={!enabled} />{" "}
                 {label}
                 {!enabled && "  (later phase)"}
               </label>

@@ -8,8 +8,7 @@ export function TokenStream() {
       <div className="pane-title">
         <span>TOKEN STREAM</span>
         <span>
-          <button className="btn">▶ replay 1x</button>{" "}
-          <button className="btn">2x</button>{" "}
+          <button className="btn">▶ replay 1x</button> <button className="btn">2x</button>{" "}
           <button className="btn">10x</button>
           &nbsp;&nbsp;0 / 0 tokens
         </span>

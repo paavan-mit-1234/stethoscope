@@ -1,5 +1,13 @@
 import { create } from "zustand";
-import { api, type Breakpoint, type Message, type Project, type Span, type ToolCall, type Trace } from "./data/api";
+import {
+  type Breakpoint,
+  type Message,
+  type Project,
+  type Span,
+  type ToolCall,
+  type Trace,
+  api,
+} from "./data/api";
 import { evaluatePredicate, parsePredicate } from "./data/breakpoint";
 import { HELP_LINES, evalPath, parseCommand } from "./data/command";
 import { type AlignedPair, alignSpans, firstDivergence } from "./data/diff";
@@ -103,8 +111,7 @@ export const useStore = create<State>((set, get) => ({
   _bpSig: null,
 
   dismissSplash: () => set({ splashDone: true }),
-  print: (text, kind = "out") =>
-    set((s) => ({ scrollback: [...s.scrollback, { text, kind }] })),
+  print: (text, kind = "out") => set((s) => ({ scrollback: [...s.scrollback, { text, kind }] })),
   pushHistory: (cmd) => set((s) => ({ history: [...s.history, cmd] })),
 
   init: async () => {
@@ -163,8 +170,7 @@ export const useStore = create<State>((set, get) => ({
 
   cycleHeatmap: () =>
     set((s) => ({
-      heatmap:
-        s.heatmap === "off" ? "lat" : s.heatmap === "lat" ? "cost" : "off",
+      heatmap: s.heatmap === "off" ? "lat" : s.heatmap === "lat" ? "cost" : "off",
     })),
 
   selectTrace: async (id) => {
@@ -180,10 +186,7 @@ export const useStore = create<State>((set, get) => ({
   selectSpan: async (id) => {
     set({ selectedSpanId: id, messages: [], toolCall: null });
     try {
-      const [messages, toolCall] = await Promise.all([
-        api.getMessages(id),
-        api.getToolCall(id),
-      ]);
+      const [messages, toolCall] = await Promise.all([api.getMessages(id), api.getToolCall(id)]);
       set({ messages, toolCall });
     } catch {
       set({ connected: false });
@@ -264,10 +267,7 @@ export const useStore = create<State>((set, get) => ({
           };
           const hit = preds.find((pp) => evaluatePredicate(pp.e, ctx));
           if (hit) {
-            p(
-              `⚑ breakpoint hit: ${hit.b.name || hit.b.condition_dsl} @ ${sp.name}`,
-              "err",
-            );
+            p(`⚑ breakpoint hit: ${hit.b.name || hit.b.condition_dsl} @ ${sp.name}`, "err");
             void get().selectSpan(sp.id);
             return;
           }
@@ -284,8 +284,9 @@ export const useStore = create<State>((set, get) => ({
         }
         pathTo(s.spans, s.selectedSpanId).forEach((sp, i) =>
           p(
-            `#${i} ${"  ".repeat(i)}${sp.name} [${sp.kind}]` +
-              (sp.id === s.selectedSpanId ? "   <-- current" : ""),
+            `#${i} ${"  ".repeat(i)}${sp.name} [${sp.kind}]${
+              sp.id === s.selectedSpanId ? "   <-- current" : ""
+            }`,
             "out",
           ),
         );
@@ -332,10 +333,7 @@ export const useStore = create<State>((set, get) => ({
           void get().openDiff(sel.parent_trace_id, sel.id);
           return;
         }
-        p(
-          "diff: shift-click two traces, or select a branch, or `diff <a> <b>`",
-          "err",
-        );
+        p("diff: shift-click two traces, or select a branch, or `diff <a> <b>`", "err");
         return;
       }
       case "watch":
@@ -351,15 +349,13 @@ export const useStore = create<State>((set, get) => ({
             );
           return;
         }
-        void api
-          .addBreakpoint({ condition_dsl: cmd.arg })
-          .then((r) => {
-            if (r.error) p(`break: ${r.error}`, "err");
-            else {
-              p(`Breakpoint ${r.id?.slice(0, 8)} set: ${cmd.arg}`, "out");
-              void get().refreshBreakpoints();
-            }
-          });
+        void api.addBreakpoint({ condition_dsl: cmd.arg }).then((r) => {
+          if (r.error) p(`break: ${r.error}`, "err");
+          else {
+            p(`Breakpoint ${r.id?.slice(0, 8)} set: ${cmd.arg}`, "out");
+            void get().refreshBreakpoints();
+          }
+        });
         return;
       }
       case "delete":
@@ -399,10 +395,7 @@ export const useStore = create<State>((set, get) => ({
   openBranch: async (spanId) => {
     const span = get().spans.find((x) => x.id === spanId);
     if (!span || span.kind !== "tool_call") {
-      get().print(
-        "branch: that span is not a tool call (Phase 5 mutates tool responses)",
-        "err",
-      );
+      get().print("branch: that span is not a tool call (Phase 5 mutates tool responses)", "err");
       return;
     }
     let value = "";
@@ -423,11 +416,9 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  closeBranch: () =>
-    set((s) => ({ branchModal: { ...s.branchModal, open: false, busy: false } })),
+  closeBranch: () => set((s) => ({ branchModal: { ...s.branchModal, open: false, busy: false } })),
 
-  setBranchValue: (v) =>
-    set((s) => ({ branchModal: { ...s.branchModal, value: v } })),
+  setBranchValue: (v) => set((s) => ({ branchModal: { ...s.branchModal, value: v } })),
 
   confirmBranch: async () => {
     const { branchModal: bm, selectedTraceId, print } = get();
@@ -464,10 +455,7 @@ export const useStore = create<State>((set, get) => ({
 
   openDiff: async (aId, bId) => {
     try {
-      const [as_, bs] = await Promise.all([
-        api.getSpans(aId),
-        api.getSpans(bId),
-      ]);
+      const [as_, bs] = await Promise.all([api.getSpans(aId), api.getSpans(bId)]);
       const pairs = alignSpans(as_, bs);
       const tr = get().traces;
       const lab = (id: string) => {

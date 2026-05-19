@@ -16,9 +16,7 @@ export function Splash() {
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
-    const timers = LINES.map((_, i) =>
-      window.setTimeout(() => setShown(i + 1), 250 + i * 280),
-    );
+    const timers = LINES.map((_, i) => window.setTimeout(() => setShown(i + 1), 250 + i * 280));
     const auto = window.setTimeout(dismiss, 1500);
     const key = () => dismiss();
     window.addEventListener("keydown", key);
@@ -51,9 +49,7 @@ export function Splash() {
       <div style={{ fontFamily: "var(--display)", fontSize: 9, letterSpacing: 1 }}>
         A TIME-TRAVEL DEBUGGER FOR AGENTS
       </div>
-      <div style={{ fontFamily: "var(--mono)", fontSize: 12 }}>
-        v1.0.0 — © Paavan Sejpal 2026
-      </div>
+      <div style={{ fontFamily: "var(--mono)", fontSize: 12 }}>v1.0.0 — © Paavan Sejpal 2026</div>
       <pre
         style={{
           fontFamily: "var(--mono)",
@@ -68,7 +64,8 @@ export function Splash() {
       <div style={{ fontFamily: "var(--mono)", fontSize: 13, height: 16 }}>
         {shown >= LINES.length && (
           <>
-            PRESS ANY KEY TO BEGIN<Cursor />
+            PRESS ANY KEY TO BEGIN
+            <Cursor />
           </>
         )}
       </div>

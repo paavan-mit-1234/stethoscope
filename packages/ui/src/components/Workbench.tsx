@@ -12,8 +12,7 @@ import { StateWatcher } from "./panes/StateWatcher";
 import { TokenStream } from "./panes/TokenStream";
 import { TraceTree } from "./panes/TraceTree";
 
-const clamp = (v: number, lo: number, hi: number) =>
-  Math.max(lo, Math.min(hi, v));
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // PRD 8.4 — five-pane Workbench. Three columns on top
 // (Trace Tree | Inspector | State Watcher), then full-width Token Stream and
@@ -38,7 +37,11 @@ export function Workbench() {
   // prompt and filter still accept these letters; Esc in the prompt blurs.
   useEffect(() => {
     const KEYS: Record<string, string> = {
-      n: "n", p: "p", s: "s", f: "f", c: "c",
+      n: "n",
+      p: "p",
+      s: "s",
+      f: "f",
+      c: "c",
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
@@ -66,34 +69,22 @@ export function Workbench() {
             <div style={{ width: leftW, display: "flex" }}>
               <TraceTree />
             </div>
-            <Splitter
-              axis="v"
-              onDelta={(px) => setLeftW((w) => clamp(w + px, 140, 520))}
-            />
+            <Splitter axis="v" onDelta={(px) => setLeftW((w) => clamp(w + px, 140, 520))} />
             <div style={{ flex: 1, display: "flex", minWidth: 0 }}>
               <Inspector />
             </div>
-            <Splitter
-              axis="v"
-              onDelta={(px) => setRightW((w) => clamp(w - px, 160, 560))}
-            />
+            <Splitter axis="v" onDelta={(px) => setRightW((w) => clamp(w - px, 160, 560))} />
             <div style={{ width: rightW, display: "flex" }}>
               <StateWatcher />
             </div>
           </div>
 
-          <Splitter
-            axis="h"
-            onDelta={(py) => setTokenH((h) => clamp(h - py, 60, 400))}
-          />
+          <Splitter axis="h" onDelta={(py) => setTokenH((h) => clamp(h - py, 60, 400))} />
           <div style={{ height: tokenH }}>
             <TokenStream />
           </div>
 
-          <Splitter
-            axis="h"
-            onDelta={(py) => setCmdH((h) => clamp(h - py, 60, 400))}
-          />
+          <Splitter axis="h" onDelta={(py) => setCmdH((h) => clamp(h - py, 60, 400))} />
           <div style={{ height: cmdH }}>
             <CommandBar />
           </div>
