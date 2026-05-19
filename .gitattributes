@@ -1,0 +1,18 @@
+# Canonical LF line endings in the repo, regardless of contributor OS.
+# This project's toolchains (Rust, Python, Node, Docker, Terraform) and CI
+# (Linux/macOS/Windows) all expect LF; this makes it deterministic and
+# silences the "LF will be replaced by CRLF" warnings.
+* text=auto eol=lf
+
+# PowerShell is Windows-native — keep CRLF.
+*.ps1 text eol=crlf
+
+# Treat these as binary (never line-ending-converted).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.gif  binary
+*.woff2 binary
+*.parquet binary
+*.duckdb binary
