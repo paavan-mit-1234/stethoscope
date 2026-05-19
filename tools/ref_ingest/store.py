@@ -32,6 +32,7 @@ class TraceRow:
     total_tokens_out: int | None
     agent_framework: str | None
     is_branch: bool
+    parent_trace_id: str | None
 
 
 class Store:
@@ -174,7 +175,8 @@ class Store:
             SELECT t.id, t.project_id, t.label, t.status, t.started_at,
                    t.ended_at, COUNT(s.id) AS span_count, t.total_cost_usd,
                    t.total_tokens_in, t.total_tokens_out, t.agent_framework,
-                   (t.parent_trace_id IS NOT NULL) AS is_branch
+                   (t.parent_trace_id IS NOT NULL) AS is_branch,
+                   t.parent_trace_id
             FROM traces t
             LEFT JOIN spans s ON s.trace_id = t.id
             WHERE (? IS NULL OR t.project_id = ?)
@@ -191,7 +193,7 @@ class Store:
                 started_at=r[4], ended_at=r[5], span_count=r[6],
                 total_cost_usd=r[7], total_tokens_in=r[8],
                 total_tokens_out=r[9], agent_framework=r[10],
-                is_branch=bool(r[11]),
+                is_branch=bool(r[11]), parent_trace_id=r[12],
             )
             for r in rows
         ]
@@ -203,3 +205,143 @@ class Store:
                 "SELECT id, name FROM projects ORDER BY created_at"
             ).fetchall()
         ]
+
+    # ---- read API (Phase 3) -------------------------------------------
+    # Returns JSON-friendly dicts; the HTTP layer serializes datetimes.
+
+    def _rows(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
+        cur = self._con.execute(sql, params)
+        cols = [d[0] for d in cur.description]
+        return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+    def get_spans(self, trace_id: str) -> list[dict[str, Any]]:
+        """All spans for a trace, ordered for tree construction."""
+        return self._rows(
+            """SELECT id, trace_id, parent_span_id, kind, name, started_at,
+                      ended_at, duration_ms, status, error_message, cost_usd,
+                      tokens_in, tokens_out, tokens_cached, model, provider,
+                      temperature, prompt_hash, cacheable, attributes_json
+               FROM spans WHERE trace_id = ?
+               ORDER BY started_at, id""",
+            [trace_id],
+        )
+
+    def get_span(self, span_id: str) -> dict[str, Any] | None:
+        rows = self._rows("SELECT * FROM spans WHERE id = ?", [span_id])
+        return rows[0] if rows else None
+
+    def get_messages(self, span_id: str) -> list[dict[str, Any]]:
+        return self._rows(
+            """SELECT id, span_id, seq, role, content_inline, content_ref,
+                      tool_call_id
+               FROM messages WHERE span_id = ? ORDER BY seq""",
+            [span_id],
+        )
+
+    def get_tool_call(self, span_id: str) -> dict[str, Any] | None:
+        rows = self._rows(
+            "SELECT * FROM tool_calls WHERE span_id = ?", [span_id]
+        )
+        return rows[0] if rows else None
+
+    def get_state(self, span_id: str) -> list[dict[str, Any]]:
+        return self._rows(
+            """SELECT id, span_id, captured_at, state_ref, state_hash,
+                      schema_version
+               FROM state_snapshots WHERE span_id = ? ORDER BY captured_at""",
+            [span_id],
+        )
+
+    # ---- replay cache (PRD 7.3) ---------------------------------------
+    # response_ref holds the response inline (consistent with the documented
+    # "inline, not Parquet yet" slice limitation).
+
+    def upsert_llm_cache(self, c: dict[str, Any]) -> None:
+        self._con.execute(
+            """INSERT INTO llm_cache (
+                prompt_hash, model, response_ref, tokens_in, tokens_out,
+                captured_at
+            ) VALUES (?,?,?,?,?,?)
+            ON CONFLICT (prompt_hash) DO UPDATE SET
+                model=excluded.model, response_ref=excluded.response_ref,
+                tokens_in=excluded.tokens_in, tokens_out=excluded.tokens_out,
+                captured_at=excluded.captured_at""",
+            [
+                c["prompt_hash"], c.get("model"), c.get("response_ref"),
+                c.get("tokens_in"), c.get("tokens_out"), c["captured_at"],
+            ],
+        )
+
+    def get_llm_cache(self, prompt_hash: str) -> dict[str, Any] | None:
+        rows = self._rows(
+            "SELECT * FROM llm_cache WHERE prompt_hash = ?", [prompt_hash]
+        )
+        return rows[0] if rows else None
+
+    # ---- breakpoints (Phase 7, PRD 4.3 / 9.5) -------------------------
+
+    def add_breakpoint(
+        self, project_id: str, name: str | None, condition_dsl: str
+    ) -> str:
+        bid = ulid()
+        self._con.execute(
+            """INSERT INTO breakpoints (id, project_id, name, condition_dsl,
+               enabled, hit_count) VALUES (?,?,?,?,TRUE,0)""",
+            [bid, project_id, name, condition_dsl],
+        )
+        return bid
+
+    def delete_breakpoint(self, bp_id: str) -> None:
+        self._con.execute("DELETE FROM breakpoints WHERE id = ?", [bp_id])
+
+    def list_breakpoints(self) -> list[dict[str, Any]]:
+        return self._rows(
+            """SELECT id, project_id, name, condition_dsl, enabled,
+                      hit_count, last_hit_at, last_hit_span_id,
+                      last_hit_trace_id
+               FROM breakpoints ORDER BY id""",
+            [],
+        )
+
+    def enabled_breakpoints(self) -> list[dict[str, Any]]:
+        return self._rows(
+            "SELECT id, condition_dsl FROM breakpoints WHERE enabled = TRUE",
+            [],
+        )
+
+    def record_breakpoint_hit(
+        self, bp_id: str, span_id: str, trace_id: str, when
+    ) -> None:
+        self._con.execute(
+            """UPDATE breakpoints
+               SET hit_count = hit_count + 1, last_hit_at = ?,
+                   last_hit_span_id = ?, last_hit_trace_id = ?
+               WHERE id = ?""",
+            [when, span_id, trace_id, bp_id],
+        )
+
+    # ---- .steth portable bundle (Phase 7, PRD 4.11) -------------------
+
+    def export_trace(self, trace_id: str) -> dict[str, Any]:
+        spans = self.get_spans(trace_id)
+        bundle: dict[str, Any] = {
+            "steth_version": 1,
+            "trace_id": trace_id,
+            "spans": spans,
+            "messages": {},
+            "tool_calls": {},
+            "llm_cache": {},
+        }
+        for s in spans:
+            sid = s["id"]
+            ms = self.get_messages(sid)
+            if ms:
+                bundle["messages"][sid] = ms
+            tc = self.get_tool_call(sid)
+            if tc:
+                bundle["tool_calls"][sid] = tc
+            if s.get("prompt_hash"):
+                hit = self.get_llm_cache(s["prompt_hash"])
+                if hit:
+                    bundle["llm_cache"][s["prompt_hash"]] = hit
+        return bundle

@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Never commit secrets.
+region        = "us-east-1"
+project       = "stethoscope"
+image_tag     = "v1"
+db_username   = "stethoscope"
+db_password   = "CHANGE-ME-strong-password"
+desired_count = 1

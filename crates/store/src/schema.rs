@@ -127,7 +127,12 @@ CREATE TABLE IF NOT EXISTS breakpoints (
     name            VARCHAR,
     condition_dsl   VARCHAR NOT NULL,
     enabled         BOOLEAN DEFAULT TRUE,
-    hit_count       BIGINT DEFAULT 0
+    hit_count       BIGINT DEFAULT 0,
+    -- Stethoscope extension (beyond PRD 7.1): last-hit pointer so the UI can
+    -- focus the matching span (PRD 9.5 "focuses the matching span").
+    last_hit_at       TIMESTAMP,
+    last_hit_span_id  VARCHAR,
+    last_hit_trace_id VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS saved_queries (

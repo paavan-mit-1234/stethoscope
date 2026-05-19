@@ -31,9 +31,9 @@ def default_db_path(project: str = "default") -> str:
 
 
 class _TraceService(trace_service_pb2_grpc.TraceServiceServicer):
-    def __init__(self, store: Store):
+    def __init__(self, store: Store, lock: threading.Lock):
         self._store = store
-        self._lock = threading.Lock()  # duckdb conn is single-threaded
+        self._lock = lock  # shared with the read API; duckdb is 1-threaded
 
     def Export(self, request, context):
         try:
@@ -50,9 +50,16 @@ class _TraceService(trace_service_pb2_grpc.TraceServiceServicer):
 def serve(addr: str = DEFAULT_OTLP_ADDR, db_path: str | None = None) -> None:
     db_path = db_path or default_db_path()
     store = Store.open(db_path)
+    lock = threading.Lock()  # serializes the single duckdb connection
+
+    # Read API (Phase 3) shares this store+lock with the gRPC receiver.
+    from .api import serve_api
+
+    api = serve_api(store, lock)
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     trace_service_pb2_grpc.add_TraceServiceServicer_to_server(
-        _TraceService(store), server
+        _TraceService(store, lock), server
     )
     server.add_insecure_port(addr)
     server.start()
@@ -63,3 +70,4 @@ def serve(addr: str = DEFAULT_OTLP_ADDR, db_path: str | None = None) -> None:
     except KeyboardInterrupt:
         _log.info("shutdown signal received")
         server.stop(grace=2)
+        api.shutdown()

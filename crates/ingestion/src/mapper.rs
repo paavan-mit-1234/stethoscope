@@ -12,7 +12,8 @@ use opentelemetry_proto::tonic::common::v1::KeyValue;
 use opentelemetry_proto::tonic::trace::v1::Span as OtelSpan;
 use std::collections::HashMap;
 use stethoscope_store::{
-    span_kind, trace_status, NewMessage, NewSpan, NewToolCall, NewTrace, Store,
+    span_kind, trace_status, LlmCacheEntry, NewMessage, NewSpan, NewToolCall,
+    NewTrace, Store,
 };
 use ulid::Ulid;
 
@@ -238,6 +239,25 @@ pub fn ingest_request(store: &Store, req: &ExportTraceServiceRequest) -> Result<
                 if mapped.kind == span_kind::TOOL_CALL {
                     if let Some(tc) = extract_tool_call(&mapped.id, &sp.attributes) {
                         store.insert_tool_call(&tc)?;
+                    }
+                }
+                // Replay cache (PRD 7.3): pin deterministic LLM responses.
+                if mapped.kind == span_kind::LLM_CALL {
+                    if let Some(hash) = &mapped.prompt_hash {
+                        if let Some(resp) =
+                            get_str(&sp.attributes, "gen_ai.completion.0.content")
+                        {
+                            store.upsert_llm_cache(&LlmCacheEntry {
+                                prompt_hash: hash.clone(),
+                                model: mapped.model.clone(),
+                                response_ref: resp.to_string(),
+                                tokens_in: mapped.tokens_in,
+                                tokens_out: mapped.tokens_out,
+                                captured_at: mapped
+                                    .started_at
+                                    .unwrap_or_else(Utc::now),
+                            })?;
+                        }
                     }
                 }
                 span_count += 1;

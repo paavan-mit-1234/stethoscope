@@ -16,6 +16,7 @@ from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import (
     ExportTraceServiceRequest,
 )
 
+from . import bp
 from .ids import ulid
 from .schema import SPAN_KIND, TRACE_STATUS
 from .store import Store
@@ -198,8 +199,32 @@ def _extract_tool_call(span_id: str, a) -> dict | None:
     }
 
 
+def _bp_ctx(mapped: dict, tool_name: str | None) -> dict:
+    return {
+        "kind": mapped["kind"],
+        "name": mapped["name"],
+        "status": mapped["status"],
+        "duration_ms": mapped.get("duration_ms"),
+        "model": mapped.get("model"),
+        "provider": mapped.get("provider"),
+        "tokens_in": mapped.get("tokens_in"),
+        "tokens_out": mapped.get("tokens_out"),
+        "cost_usd": mapped.get("cost_usd"),
+        "error_message": mapped.get("error_message"),
+        "tool_name": tool_name,
+    }
+
+
 def ingest_request(store: Store, req: ExportTraceServiceRequest) -> int:
     span_count = 0
+    # Compile enabled breakpoints once per batch (PRD 9.5 live detection).
+    bps: list[tuple[str, object]] = []
+    for b in store.enabled_breakpoints():
+        try:
+            bps.append((b["id"], bp.parse(b["condition_dsl"])))
+        except ValueError:
+            pass  # invalid predicate: skip, never break ingestion
+
     for rs in req.resource_spans:
         res_attrs = rs.resource.attributes if rs.HasField("resource") else []
         project_name = (
@@ -267,11 +292,42 @@ def ingest_request(store: Store, req: ExportTraceServiceRequest) -> int:
 
             for sp, mapped in pairs:
                 store.upsert_span(mapped)
+                tool_name = None
                 for m in _extract_messages(mapped["id"], sp.attributes):
                     store.insert_message(m)
                 if mapped["kind"] == SPAN_KIND["TOOL_CALL"]:
                     tc = _extract_tool_call(mapped["id"], sp.attributes)
                     if tc:
                         store.insert_tool_call(tc)
+                        tool_name = tc["tool_name"]
+                # Replay cache (PRD 7.3): pin deterministic LLM responses.
+                if mapped["kind"] == SPAN_KIND["LLM_CALL"] and mapped["prompt_hash"]:
+                    resp = _get_str(sp.attributes, "gen_ai.completion.0.content")
+                    if resp is not None:
+                        store.upsert_llm_cache(
+                            {
+                                "prompt_hash": mapped["prompt_hash"],
+                                "model": mapped["model"],
+                                "response_ref": resp,
+                                "tokens_in": mapped["tokens_in"],
+                                "tokens_out": mapped["tokens_out"],
+                                "captured_at": mapped["started_at"]
+                                or datetime.utcnow(),
+                            }
+                        )
+                # Breakpoint hit detection (PRD 9.5).
+                if bps:
+                    ctx = _bp_ctx(mapped, tool_name)
+                    for bid, expr in bps:
+                        try:
+                            if bp.evaluate(expr, ctx):
+                                store.record_breakpoint_hit(
+                                    bid,
+                                    mapped["id"],
+                                    trace_id,
+                                    datetime.utcnow(),
+                                )
+                        except Exception:
+                            pass  # never break ingestion on a bad predicate
                 span_count += 1
     return span_count

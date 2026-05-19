@@ -2,9 +2,11 @@
   "name": "@stethoscope/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Stethoscope desktop shell (Tauri 2). Phase 2 — The Workbench.",
+  "description": "Stethoscope desktop shell (Tauri 2). The Workbench (PRD section 8).",
   "scripts": {
-    "dev": "echo \"Phase 2: Tauri shell not yet scaffolded\" && exit 0",
-    "build": "echo \"Phase 2: Tauri shell not yet scaffolded\" && exit 0"
+    "dev": "pnpm --filter @stethoscope/ui dev",
+    "build": "pnpm --filter @stethoscope/ui build",
+    "tauri:dev": "echo \"needs Rust toolchain (see docs/windows-build.md); then: cargo tauri dev\" && exit 1",
+    "tauri:build": "echo \"needs Rust toolchain (see docs/windows-build.md); then: cargo tauri build\" && exit 1"
   }
 }

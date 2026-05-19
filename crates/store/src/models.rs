@@ -72,6 +72,77 @@ pub struct NewToolCall {
     pub error: Option<String>,
 }
 
+/// Read projection for the Trace Tree (Phase 3).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanRow {
+    pub id: String,
+    pub trace_id: String,
+    pub parent_span_id: Option<String>,
+    pub kind: String,
+    pub name: String,
+    pub started_at: Option<DateTime<Utc>>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub duration_ms: Option<i64>,
+    pub status: String,
+    pub error_message: Option<String>,
+    pub cost_usd: Option<f64>,
+    pub tokens_in: Option<i64>,
+    pub tokens_out: Option<i64>,
+    pub tokens_cached: Option<i64>,
+    pub model: Option<String>,
+    pub provider: Option<String>,
+    pub temperature: Option<f64>,
+    pub prompt_hash: Option<String>,
+    pub cacheable: Option<bool>,
+    pub attributes_json: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageRow {
+    pub id: String,
+    pub span_id: String,
+    pub seq: i32,
+    pub role: String,
+    pub content_inline: Option<String>,
+    pub content_ref: Option<String>,
+    pub tool_call_id: Option<String>,
+}
+
+/// Breakpoint definition + last-hit pointer (PRD 7.1 + Stethoscope ext).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BreakpointRow {
+    pub id: String,
+    pub project_id: String,
+    pub name: Option<String>,
+    pub condition_dsl: String,
+    pub enabled: bool,
+    pub hit_count: i64,
+    pub last_hit_at: Option<DateTime<Utc>>,
+    pub last_hit_span_id: Option<String>,
+    pub last_hit_trace_id: Option<String>,
+}
+
+/// Replay cache row (PRD 7.3). `response_ref` holds the response inline
+/// (documented slice limitation; Parquet offload is later).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmCacheEntry {
+    pub prompt_hash: String,
+    pub model: Option<String>,
+    pub response_ref: String,
+    pub tokens_in: Option<i64>,
+    pub tokens_out: Option<i64>,
+    pub captured_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallRow {
+    pub span_id: String,
+    pub tool_name: String,
+    pub arguments_inline: Option<String>,
+    pub result_inline: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Read projection for `stethoscope list-traces`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceRow {
@@ -87,4 +158,5 @@ pub struct TraceRow {
     pub total_tokens_out: Option<i64>,
     pub agent_framework: Option<String>,
     pub is_branch: bool,
+    pub parent_trace_id: Option<String>,
 }

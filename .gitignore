@@ -32,6 +32,16 @@ apps/desktop/src-tauri/gen
 # Toolchain (portable, not committed)
 /.toolchain/
 
+# Claude Code local agent settings (not project code)
+/.claude/
+
+# Cloud: never commit Terraform state or secrets
+*.tfstate
+*.tfstate.*
+.terraform/
+cloud/infra/terraform.tfvars
+.stethoscope-cloud/
+
 # Editors / OS
 .DS_Store
 Thumbs.db

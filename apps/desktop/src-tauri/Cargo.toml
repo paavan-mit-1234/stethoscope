@@ -1,0 +1,27 @@
+[package]
+name = "stethoscope-desktop"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Paavan Sejpal"]
+description = "Stethoscope desktop shell (Tauri 2) — The Workbench"
+
+# Not a member of the root crates workspace (Tauri pulls a heavy dep tree;
+# excluded in the root Cargo.toml so `cargo test --workspace` stays lean).
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+stethoscope-ingestion = { path = "../../../crates/ingestion" }
+stethoscope-store = { path = "../../../crates/store" }
+stethoscope-replay = { path = "../../../crates/replay" }
+stethoscope-diff = { path = "../../../crates/diff" }
+stethoscope-breakpoint = { path = "../../../crates/breakpoint" }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

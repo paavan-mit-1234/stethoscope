@@ -1,0 +1,12 @@
+[package]
+name = "stethoscope-command"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# Canonical command grammar for the gdb-style Command Bar (PRD 8.5.5).
+# Hand-rolled, zero-dependency. The UI ships a TS mirror (command.ts) until
+# the Tauri shell compiles; both must parse the same grammar.
+
+[dependencies]

@@ -23,6 +23,14 @@ class StethoscopeConfig:
     project: str = field(
         default_factory=lambda: os.environ.get("STETHOSCOPE_PROJECT", "default")
     )
+    # Transport: "grpc" (local ingestion, default) or "http" (Stethoscope
+    # Cloud — OTLP/HTTP to https://.../v1/traces with an API key).
+    transport: str = field(
+        default_factory=lambda: os.environ.get("STETHOSCOPE_TRANSPORT", "grpc")
+    )
+    api_key: str | None = field(
+        default_factory=lambda: os.environ.get("STETHOSCOPE_API_KEY")
+    )
     framework: str = "langgraph"
     framework_version: str | None = None
     # Regex patterns whose matches are replaced with "[REDACTED]" before export.

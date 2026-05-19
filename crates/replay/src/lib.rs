@@ -58,8 +58,42 @@ pub fn prompt_hash(model: &str, system: &str, messages: &str, params: &str) -> S
     hex::encode(h.finalize())
 }
 
-/// Replay `spec` in a sandbox, returning the new branch trace.
-pub fn replay_from(_spec: &BranchSpec) -> Result<ReplayOutcome, ReplayError> {
+/// Deterministic replay manifest. Built from the source trace's llm_cache
+/// (PRD 7.3) + tool snapshots with the [`Mutation`] applied. The Python
+/// reference (`tools/ref_replay`) builds the identical structure today.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Manifest {
+    pub parent_trace_id: String,
+    pub branch_point_span_id: String,
+    pub entrypoint: String,
+    /// prompt_hash -> pinned response (deterministic LLM).
+    pub llm: std::collections::BTreeMap<String, String>,
+    /// tool name -> recorded result (the mutated one is overwritten).
+    pub tools: std::collections::BTreeMap<String, String>,
+}
+
+/// Sandbox runtime (PRD 3.2 / 5.1). Docker is the primary; `Venv` is the
+/// documented fallback and is what the Python reference uses today.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplayRuntime {
+    Docker,
+    Venv,
+}
+
+/// Reconstruct the manifest for `spec` from the trace store.
+/// (Spec; the runnable equivalent is `tools/ref_replay.engine._build_manifest`.)
+pub fn build_manifest(
+    _store: &stethoscope_store::Store,
+    _spec: &BranchSpec,
+) -> Result<Manifest, ReplayError> {
+    Err(ReplayError::NotImplemented)
+}
+
+/// Replay `spec` in `runtime`, emitting a new branch trace over OTLP.
+pub fn replay_from(
+    _spec: &BranchSpec,
+    _runtime: ReplayRuntime,
+) -> Result<ReplayOutcome, ReplayError> {
     Err(ReplayError::NotImplemented)
 }
 

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stethoscope — docs</title>
+    <style>
+      :root {
+        --chrome:#c0c0c0; --chrome-dark:#808080; --window-bg:#d4d0c8;
+        --canvas:#fff; --ink:#000; --selection:#000080; --sel-text:#fff;
+        --blue:#0000c0; --hi:#fff;
+        --mono:"IBM Plex Mono","Cascadia Mono",Consolas,monospace;
+      }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--window-bg); color:var(--ink);
+        font-family:var(--mono); font-size:14px; line-height:1.35;
+        -webkit-font-smoothing:none; }
+      a { color:var(--blue); }
+      .wrap { max-width:920px; margin:0 auto; padding:16px 12px 50px; }
+      .raised { border:2px solid; border-color:var(--hi) var(--chrome-dark)
+        var(--chrome-dark) var(--hi); background:var(--chrome); margin:14px 0; }
+      .titlebar { background:var(--selection); color:var(--sel-text);
+        padding:3px 8px; letter-spacing:1px; }
+      .body { padding:12px; }
+      pre { margin:0; background:var(--canvas); padding:10px; overflow:auto;
+        border:1px solid; border-color:var(--chrome-dark) var(--hi) var(--hi)
+        var(--chrome-dark); }
+      table { width:100%; border-collapse:collapse; }
+      td,th { border:1px solid var(--chrome-dark); padding:5px 8px;
+        text-align:left; vertical-align:top; }
+      th { background:var(--chrome); }
+      code { background:var(--canvas); padding:0 3px; border:1px solid
+        var(--chrome-dark); }
+      h2 { font-size:15px; margin:0 0 8px; }
+      .muted { color:var(--chrome-dark); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p><a href="index.html">&laquo; Stethoscope</a></p>
+
+      <div class="raised">
+        <div class="titlebar">Command Bar (the gdb-style REPL)</div>
+        <div class="body">
+          <table>
+            <tr><th>Command</th><th>Does</th></tr>
+            <tr><td><code>next / n</code></td><td>advance one span</td></tr>
+            <tr><td><code>prev / p</code></td><td>step back one span</td></tr>
+            <tr><td><code>step / s</code></td><td>step into child spans</td></tr>
+            <tr><td><code>finish / f</code></td><td>step out to parent</td></tr>
+            <tr><td><code>continue / c</code></td><td>run to next breakpoint</td></tr>
+            <tr><td><code>where</code></td><td>print trace position (backtrace)</td></tr>
+            <tr><td><code>print &lt;expr&gt;</code></td><td>eval against current span,
+              e.g. <code>print messages[-1].content_inline</code></td></tr>
+            <tr><td><code>break &lt;predicate&gt;</code></td><td>set a breakpoint;
+              <code>break list</code> to list</td></tr>
+            <tr><td><code>delete &lt;id&gt;</code></td><td>delete a breakpoint</td></tr>
+            <tr><td><code>branch [span_id]</code></td><td>branch + replay from a span</td></tr>
+            <tr><td><code>diff [a] [b]</code></td><td>diff two traces (or a branch
+              vs its parent)</td></tr>
+            <tr><td><code>export [trace_id]</code></td><td>download a
+              <code>.steth</code> bundle</td></tr>
+          </table>
+          <p class="muted">Keys <code>n p s f c</code> work whenever focus is
+          outside a text field (Esc blurs the prompt).</p>
+        </div>
+      </div>
+
+      <div class="raised">
+        <div class="titlebar">Breakpoint predicate DSL</div>
+        <div class="body">
+          <pre>break kind == 'tool_call' AND tool_name == 'web_search' AND duration_ms &gt; 5000
+break status == 'error'
+break NOT (provider == 'anthropic') OR cost_usd &gt; 0.05
+break name contains 'planner'</pre>
+          <p>Fields: <code>kind name status tool_name model provider
+          duration_ms tokens_in tokens_out cost_usd error_message</code>.
+          Operators: <code>== != &gt; &lt; &gt;= &lt;= contains</code>,
+          combined with <code>AND OR NOT</code> and parentheses. Hits are
+          detected live during ingestion; the status bar shows
+          <code>⚑ breakpoint &lt;name&gt;</code> and the matching span is
+          focused.</p>
+        </div>
+      </div>
+
+      <div class="raised">
+        <div class="titlebar">The .steth bundle</div>
+        <div class="body">
+          A portable JSON document: <code>trace</code> + all
+          <code>spans</code>, <code>messages</code>, <code>tool_calls</code>,
+          and the <code>llm_cache</code> needed to replay it. Attach it to an
+          incident postmortem; open it anywhere.
+        </div>
+      </div>
+
+      <div class="raised">
+        <div class="titlebar">Architecture</div>
+        <div class="body">
+          Python SDK (one-line <code>attach</code>) → OTLP/gRPC → ingestion
+          → DuckDB + Parquet → the Workbench. Replay pins LLM calls via a
+          structural prompt-hash cache (PRD §7.3) and snapshots tool I/O; a
+          branch mutates one input and re-runs deterministically. Full
+          write-up of the deterministic-replay trick:
+          <span class="muted">docs/replay.md</span>.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

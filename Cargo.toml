@@ -5,7 +5,12 @@ members = [
     "crates/ingestion",
     "crates/replay",
     "crates/cli",
+    "crates/command",
+    "crates/diff",
+    "crates/breakpoint",
 ]
+# Tauri pulls a heavy dep tree; keep it out of `cargo test --workspace`.
+exclude = ["apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"

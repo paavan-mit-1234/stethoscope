@@ -1,0 +1,12 @@
+[package]
+name = "stethoscope-breakpoint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# Canonical breakpoint predicate DSL (PRD 4.3 / 9.5). Hand-rolled,
+# zero-dependency. TS (`data/breakpoint.ts`) and Python (`tools/ref_ingest/
+# bp.py`) ship the same grammar; all three must agree.
+
+[dependencies]

@@ -1,0 +1,6 @@
+# Stethoscope Cloud API runtime deps.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+duckdb>=1.1
+opentelemetry-proto>=1.27
+psycopg[binary]>=3.2          # PgStore (cloud canon / RDS)

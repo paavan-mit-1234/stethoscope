@@ -13,7 +13,10 @@ use anyhow::{Context, Result};
 use duckdb::{params, Connection};
 use ulid::Ulid;
 
-pub use models::{NewMessage, NewSpan, NewToolCall, NewTrace, TraceRow};
+pub use models::{
+    BreakpointRow, LlmCacheEntry, MessageRow, NewMessage, NewSpan, NewToolCall,
+    NewTrace, SpanRow, ToolCallRow, TraceRow,
+};
 pub use schema::{span_kind, trace_status, SCHEMA_SQL};
 
 /// A handle to one project's trace store
@@ -235,7 +238,8 @@ impl Store {
             SELECT t.id, t.project_id, t.label, t.status, t.started_at,
                    t.ended_at, COUNT(s.id) AS span_count, t.total_cost_usd,
                    t.total_tokens_in, t.total_tokens_out, t.agent_framework,
-                   (t.parent_trace_id IS NOT NULL) AS is_branch
+                   (t.parent_trace_id IS NOT NULL) AS is_branch,
+                   t.parent_trace_id
             FROM traces t
             LEFT JOIN spans s ON s.trace_id = t.id
             WHERE (? IS NULL OR t.project_id = ?)
@@ -259,6 +263,7 @@ impl Store {
                     total_tokens_out: r.get(9)?,
                     agent_framework: r.get(10)?,
                     is_branch: r.get(11)?,
+                    parent_trace_id: r.get(12)?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -274,6 +279,216 @@ impl Store {
             .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
+    }
+
+    // ---- read API (Phase 3) — backs the Tauri IPC commands ------------
+
+    const SPAN_COLS: &'static str = "id, trace_id, parent_span_id, kind, name, \
+        started_at, ended_at, duration_ms, status, error_message, cost_usd, \
+        tokens_in, tokens_out, tokens_cached, model, provider, temperature, \
+        prompt_hash, cacheable, attributes_json";
+
+    fn map_span_row(r: &duckdb::Row) -> duckdb::Result<SpanRow> {
+        Ok(SpanRow {
+            id: r.get(0)?,
+            trace_id: r.get(1)?,
+            parent_span_id: r.get(2)?,
+            kind: r.get(3)?,
+            name: r.get(4)?,
+            started_at: r.get(5)?,
+            ended_at: r.get(6)?,
+            duration_ms: r.get(7)?,
+            status: r.get(8)?,
+            error_message: r.get(9)?,
+            cost_usd: r.get(10)?,
+            tokens_in: r.get(11)?,
+            tokens_out: r.get(12)?,
+            tokens_cached: r.get(13)?,
+            model: r.get(14)?,
+            provider: r.get(15)?,
+            temperature: r.get(16)?,
+            prompt_hash: r.get(17)?,
+            cacheable: r.get(18)?,
+            attributes_json: r.get(19)?,
+        })
+    }
+
+    /// All spans for a trace, ordered for tree construction.
+    pub fn get_spans(&self, trace_id: &str) -> Result<Vec<SpanRow>> {
+        let sql = format!(
+            "SELECT {} FROM spans WHERE trace_id = ? ORDER BY started_at, id",
+            Self::SPAN_COLS
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt
+            .query_map(params![trace_id], Self::map_span_row)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_span(&self, span_id: &str) -> Result<Option<SpanRow>> {
+        let sql = format!(
+            "SELECT {} FROM spans WHERE id = ? LIMIT 1",
+            Self::SPAN_COLS
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let mut rows = stmt
+            .query_map(params![span_id], Self::map_span_row)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows.pop())
+    }
+
+    pub fn get_messages(&self, span_id: &str) -> Result<Vec<MessageRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, span_id, seq, role, content_inline, content_ref, \
+             tool_call_id FROM messages WHERE span_id = ? ORDER BY seq",
+        )?;
+        let rows = stmt
+            .query_map(params![span_id], |r| {
+                Ok(MessageRow {
+                    id: r.get(0)?,
+                    span_id: r.get(1)?,
+                    seq: r.get(2)?,
+                    role: r.get(3)?,
+                    content_inline: r.get(4)?,
+                    content_ref: r.get(5)?,
+                    tool_call_id: r.get(6)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Upsert a replay-cache entry (PRD 7.3).
+    pub fn upsert_llm_cache(&self, c: &LlmCacheEntry) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT INTO llm_cache (
+                    prompt_hash, model, response_ref, tokens_in, tokens_out,
+                    captured_at
+                 ) VALUES (?,?,?,?,?,?)
+                 ON CONFLICT (prompt_hash) DO UPDATE SET
+                    model=excluded.model, response_ref=excluded.response_ref,
+                    tokens_in=excluded.tokens_in,
+                    tokens_out=excluded.tokens_out,
+                    captured_at=excluded.captured_at",
+                params![
+                    c.prompt_hash,
+                    c.model,
+                    c.response_ref,
+                    c.tokens_in,
+                    c.tokens_out,
+                    c.captured_at,
+                ],
+            )
+            .context("upserting llm_cache")?;
+        Ok(())
+    }
+
+    // ---- breakpoints (Phase 7, PRD 4.3 / 9.5) ------------------------
+
+    pub fn add_breakpoint(
+        &self,
+        project_id: &str,
+        name: Option<&str>,
+        condition_dsl: &str,
+    ) -> Result<String> {
+        let id = ulid::Ulid::new().to_string();
+        self.conn
+            .execute(
+                "INSERT INTO breakpoints (id, project_id, name, \
+                 condition_dsl, enabled, hit_count) VALUES (?,?,?,?,TRUE,0)",
+                params![id, project_id, name, condition_dsl],
+            )
+            .context("inserting breakpoint")?;
+        Ok(id)
+    }
+
+    pub fn delete_breakpoint(&self, id: &str) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM breakpoints WHERE id = ?", params![id])
+            .context("deleting breakpoint")?;
+        Ok(())
+    }
+
+    pub fn list_breakpoints(&self) -> Result<Vec<BreakpointRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, project_id, name, condition_dsl, enabled, hit_count, \
+             last_hit_at, last_hit_span_id, last_hit_trace_id \
+             FROM breakpoints ORDER BY id",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(BreakpointRow {
+                    id: r.get(0)?,
+                    project_id: r.get(1)?,
+                    name: r.get(2)?,
+                    condition_dsl: r.get(3)?,
+                    enabled: r.get(4)?,
+                    hit_count: r.get(5)?,
+                    last_hit_at: r.get(6)?,
+                    last_hit_span_id: r.get(7)?,
+                    last_hit_trace_id: r.get(8)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn record_breakpoint_hit(
+        &self,
+        id: &str,
+        span_id: &str,
+        trace_id: &str,
+    ) -> Result<()> {
+        self.conn
+            .execute(
+                "UPDATE breakpoints SET hit_count = hit_count + 1, \
+                 last_hit_at = now(), last_hit_span_id = ?, \
+                 last_hit_trace_id = ? WHERE id = ?",
+                params![span_id, trace_id, id],
+            )
+            .context("recording breakpoint hit")?;
+        Ok(())
+    }
+
+    pub fn get_llm_cache(&self, prompt_hash: &str) -> Result<Option<LlmCacheEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT prompt_hash, model, response_ref, tokens_in, tokens_out, \
+             captured_at FROM llm_cache WHERE prompt_hash = ? LIMIT 1",
+        )?;
+        let mut rows = stmt
+            .query_map(params![prompt_hash], |r| {
+                Ok(LlmCacheEntry {
+                    prompt_hash: r.get(0)?,
+                    model: r.get(1)?,
+                    response_ref: r.get(2)?,
+                    tokens_in: r.get(3)?,
+                    tokens_out: r.get(4)?,
+                    captured_at: r.get(5)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows.pop())
+    }
+
+    pub fn get_tool_call(&self, span_id: &str) -> Result<Option<ToolCallRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT span_id, tool_name, arguments_inline, result_inline, \
+             error FROM tool_calls WHERE span_id = ? LIMIT 1",
+        )?;
+        let mut rows = stmt
+            .query_map(params![span_id], |r| {
+                Ok(ToolCallRow {
+                    span_id: r.get(0)?,
+                    tool_name: r.get(1)?,
+                    arguments_inline: r.get(2)?,
+                    result_inline: r.get(3)?,
+                    error: r.get(4)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows.pop())
     }
 }
 

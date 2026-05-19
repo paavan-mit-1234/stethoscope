@@ -1,0 +1,54 @@
+/* PRD section 8.2 / 8.3 — the eight colors, 1px Win32 bevels, two typefaces.
+   No gradients. No transparency. No shadows except the 1px hard bevel.
+   No rounded corners anywhere. This file is load-bearing; do not "modernize". */
+
+:root {
+  --chrome: #c0c0c0;        /* panel backgrounds, bevel light face */
+  --chrome-dark: #808080;   /* bevel dark face, separators */
+  --chrome-darker: #404040; /* deeper shadow on bevels */
+  --window-bg: #d4d0c8;     /* main window ("classic gray") */
+  --canvas: #ffffff;        /* content surfaces inside panels */
+  --ink: #000000;           /* text, borders */
+  --selection: #000080;     /* selected row ("Windows blue") */
+  --selection-text: #ffffff;
+  --signal-red: #c00000;    /* errors, breakpoints, failures */
+  --signal-amber: #c08000;  /* warnings, modified state, replay */
+  --signal-green: #008000;  /* success, cache hits */
+  --signal-blue: #0000c0;   /* links, info, hyperlinked tokens */
+  --phosphor: #00c800;      /* splash wordmark only */
+  --hi: #ffffff;            /* bevel highlight face */
+
+  --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  --display: "Press Start 2P", "IBM Plex Mono", monospace;
+
+  --fs-s: 12px;
+  --fs-m: 14px;
+  --fs-l: 16px;
+  --lh: 1.3;
+}
+
+/* ---- 1px hard 3D bevels (PRD 8.2) -------------------------------------- */
+/* raised: white top+left, gray bottom+right. sunken: reversed. */
+.raised {
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--hi) var(--chrome-dark) var(--chrome-dark) var(--hi);
+}
+.sunken {
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
+}
+.raised-2 {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--hi) var(--chrome-darker) var(--chrome-darker) var(--hi);
+}
+.sunken-2 {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--chrome-darker) var(--hi) var(--hi) var(--chrome-darker);
+}
+/* 1px etched separators */
+.sep-v { border-left: 1px solid var(--chrome-dark); border-right: 1px solid var(--hi); }
+.sep-h { border-top: 1px solid var(--chrome-dark); border-bottom: 1px solid var(--hi); }
