@@ -178,11 +178,7 @@ export const api = {
   me: () => get<{ user_id: string; tenant_id: string; role: string; exp: number }>("/auth/me"),
 
   createShare: (traceId: string) =>
-    postJson<{ token: string; url: string; trace_id: string }>(
-      `/traces/${traceId}/share`,
-      {},
-    ),
+    postJson<{ token: string; url: string; trace_id: string }>(`/traces/${traceId}/share`, {}),
 
-  getShare: (token: string) =>
-    get<Record<string, unknown>>(`/share/${token}`),
+  getShare: (token: string) => get<Record<string, unknown>>(`/share/${token}`),
 };

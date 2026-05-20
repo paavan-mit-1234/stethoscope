@@ -126,9 +126,8 @@ export function LoginModal() {
             </button>
           </div>
           <div style={{ color: "var(--chrome-dark)", fontSize: 12 }}>
-            Signup also provisions your tenant + an OTLP API key. Agents ship
-            traces with that key (X-Stethoscope-Key); the UI uses it
-            alongside your session JWT.
+            Signup also provisions your tenant + an OTLP API key. Agents ship traces with that key
+            (X-Stethoscope-Key); the UI uses it alongside your session JWT.
           </div>
         </div>
       </div>
