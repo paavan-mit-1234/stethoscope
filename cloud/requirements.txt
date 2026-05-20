@@ -4,3 +4,4 @@ uvicorn[standard]>=0.30
 duckdb>=1.1
 opentelemetry-proto>=1.27
 psycopg[binary]>=3.2          # PgStore (cloud canon / RDS)
+PyJWT>=2.9                    # Cloud Phase 2 auth (HS256 + Cognito JWKS)

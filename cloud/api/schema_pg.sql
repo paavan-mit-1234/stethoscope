@@ -12,6 +12,20 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Users (Cloud Phase 2). In production the AWS canon uses Cognito as the
+-- identity store (see auth_cognito.py); this table is the local-reference
+-- equivalent and stays in the schema for environments without Cognito.
+CREATE TABLE IF NOT EXISTS users (
+    id            VARCHAR PRIMARY KEY,
+    tenant_id     VARCHAR NOT NULL,
+    email         VARCHAR NOT NULL UNIQUE,
+    password_hash VARCHAR NOT NULL,
+    pw_salt       VARCHAR NOT NULL,
+    role          VARCHAR NOT NULL DEFAULT 'member',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS users_tenant ON users(tenant_id);
+
 CREATE TABLE IF NOT EXISTS projects (
     id            VARCHAR NOT NULL,
     tenant_id     VARCHAR NOT NULL,

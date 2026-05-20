@@ -47,7 +47,29 @@ def _control_con() -> duckdb.DuckDBPyConnection:
                  created_at TIMESTAMP NOT NULL DEFAULT now()
                )"""
         )
+        # Users (Cloud Phase 2). In the AWS canon, identity lives in Cognito
+        # (see auth_cognito.py); here we hold it in the control DB.
+        _control.execute(
+            """CREATE TABLE IF NOT EXISTS users (
+                 id VARCHAR PRIMARY KEY,
+                 tenant_id VARCHAR NOT NULL,
+                 email VARCHAR NOT NULL UNIQUE,
+                 password_hash VARCHAR NOT NULL,
+                 pw_salt VARCHAR NOT NULL,
+                 role VARCHAR NOT NULL DEFAULT 'member',
+                 created_at TIMESTAMP NOT NULL DEFAULT now()
+               )"""
+        )
     return _control
+
+
+def control_connection() -> duckdb.DuckDBPyConnection:
+    """Shared control-DB connection. Callers must hold `control_lock`."""
+    return _control_con()
+
+
+# Re-export so auth.py uses the same lock as tenancy.
+control_lock = _control_lock
 
 
 def create_tenant(name: str) -> dict[str, str]:
@@ -64,6 +86,15 @@ def create_tenant(name: str) -> dict[str, str]:
             [tid, name, key],
         )
     return {"tenant_id": tid, "api_key": key}
+
+
+def tenant_api_key(tenant_id: str) -> str | None:
+    """Look up a tenant's API key by id (used by /auth to return the OTLP key)."""
+    with _control_lock:
+        row = _control_con().execute(
+            "SELECT api_key FROM tenants WHERE id = ? LIMIT 1", [tenant_id]
+        ).fetchone()
+    return row[0] if row else None
 
 
 def resolve(api_key: str | None) -> str | None:

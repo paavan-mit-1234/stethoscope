@@ -24,7 +24,13 @@ from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import (
 from tools.ref_ingest.mapper import ingest_request
 from tools.ref_replay import branch as replay_branch
 
-from .tenancy import create_tenant, resolve, store_for
+from . import auth as authmod
+from .tenancy import (
+    create_tenant,
+    resolve,
+    store_for,
+    tenant_api_key,
+)
 
 app = FastAPI(title="Stethoscope Cloud", version="1.0.0")
 
@@ -170,7 +176,7 @@ def export(trace_id: str, t: str = Depends(require_tenant)):
 @app.post("/branch")
 def branch(body: dict, t: str = Depends(require_tenant)):
     # Reference replay uses a subprocess; in cloud this becomes a worker/job
-    # (Cloud Phase 2). Functional here for parity.
+    # (Cloud Phase 3). Functional here for parity.
     s, lk = _store(t)
     return replay_branch(
         s,
@@ -179,3 +185,93 @@ def branch(body: dict, t: str = Depends(require_tenant)):
         body["branch_point_span_id"],
         body["mutation"],
     )
+
+
+# ---- Cloud Phase 2: auth + share links ---------------------------------
+
+def require_user(authorization: str | None = Header(default=None)) -> dict:
+    """JWT-gated dependency for human-facing routes. Returns the claims."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="missing Bearer token")
+    return authmod.verify_jwt(authorization.split(None, 1)[1])
+
+
+@app.post("/auth/signup")
+def signup(body: dict):
+    """Create tenant + first user; return JWT + the tenant's OTLP API key."""
+    email = (body or {}).get("email", "").strip().lower()
+    password = (body or {}).get("password", "")
+    if "@" not in email or len(password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="email + password (>=8 chars) required",
+        )
+    if authmod.find_user_by_email(email):
+        raise HTTPException(status_code=409, detail="email already registered")
+    tenant_name = (body.get("tenant_name") or email.split("@")[0]).strip()
+    t = create_tenant(tenant_name)
+    user_id = authmod.create_user(email, password, t["tenant_id"], role="owner")
+    token = authmod.issue_jwt(user_id, t["tenant_id"], "owner")
+    return {
+        "token": token,
+        "user_id": user_id,
+        "tenant_id": t["tenant_id"],
+        "tenant_name": tenant_name,
+        "api_key": t["api_key"],
+        "email": email,
+    }
+
+
+@app.post("/auth/login")
+def login(body: dict):
+    email = (body or {}).get("email", "").strip().lower()
+    password = (body or {}).get("password", "")
+    u = authmod.find_user_by_email(email)
+    if not u or not authmod.verify_password(password, u["password_hash"], u["pw_salt"]):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    return {
+        "token": authmod.issue_jwt(u["id"], u["tenant_id"], u["role"]),
+        "user_id": u["id"],
+        "tenant_id": u["tenant_id"],
+        "role": u["role"],
+        "email": u["email"],
+        "api_key": tenant_api_key(u["tenant_id"]),
+    }
+
+
+@app.get("/auth/me")
+def me(claims: dict = Depends(require_user)):
+    return {
+        "user_id": claims["sub"],
+        "tenant_id": claims["tid"],
+        "role": claims.get("role", "member"),
+        "exp": claims["exp"],
+    }
+
+
+@app.post("/traces/{trace_id}/share")
+def create_share(trace_id: str, t: str = Depends(require_tenant)):
+    """Mint a signed share link (PRD 4.11). The caller proves tenant ownership
+    via the existing API key; the returned token is short, signed, and
+    carries `{trace_id, tenant_id, exp}` so /share/{token} can serve it
+    publicly without auth."""
+    s, lk = _store(t)
+    with lk:
+        if not s.get_spans(trace_id):
+            raise HTTPException(status_code=404, detail="trace not found")
+    token = authmod.issue_share_token(trace_id, t)
+    return {"token": token, "url": f"/share/{token}", "trace_id": trace_id}
+
+
+@app.get("/share/{token}")
+def fetch_share(token: str):
+    """Public, read-only trace bundle behind a signed token."""
+    claims = authmod.verify_share_token(token)
+    tenant_id = claims["tid"]
+    trace_id = claims["share"]
+    s, lk = store_for(tenant_id)
+    with lk:
+        spans = s.get_spans(trace_id)
+        if not spans:
+            raise HTTPException(status_code=404, detail="trace not found")
+        return s.export_trace(trace_id)

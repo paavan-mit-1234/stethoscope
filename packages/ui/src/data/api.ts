@@ -78,9 +78,39 @@ export type Breakpoint = {
   last_hit_trace_id: string | null;
 };
 
+// Auth headers: when cloud-mode is on and we have a session, send the
+// tenant API key for tenant-scoped routes + the JWT for user-identity
+// routes. Local-mode (no cloud) sends nothing extra.
+function headers(extra: Record<string, string> = {}): Record<string, string> {
+  const h: Record<string, string> = { Accept: "application/json", ...extra };
+  const cloud = import.meta.env.VITE_STETH_CLOUD === "true";
+  if (cloud) {
+    try {
+      const raw = localStorage.getItem("stethoscope.auth");
+      if (raw) {
+        const a = JSON.parse(raw) as { token?: string; api_key?: string };
+        if (a.api_key) h["X-Stethoscope-Key"] = a.api_key;
+        if (a.token) h.Authorization = `Bearer ${a.token}`;
+      }
+    } catch {
+      /* no auth — caller will see 401 */
+    }
+  }
+  return h;
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: { Accept: "application/json" } });
+  const res = await fetch(`${BASE}${path}`, { headers: headers() });
   if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: headers({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
   return (await res.json()) as T;
 }
 
@@ -103,38 +133,56 @@ export const api = {
 
   listBreakpoints: () => get<Breakpoint[]>("/breakpoints"),
 
-  addBreakpoint: async (body: {
-    condition_dsl: string;
-    name?: string;
-  }): Promise<{ id?: string; error?: string }> => {
-    const res = await fetch(`${BASE}/breakpoints`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    return res.json();
-  },
+  addBreakpoint: (body: { condition_dsl: string; name?: string }) =>
+    postJson<{ id?: string; error?: string }>("/breakpoints", body),
 
   deleteBreakpoint: async (id: string): Promise<void> => {
-    await fetch(`${BASE}/breakpoints/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
+    await postJson<unknown>("/breakpoints/delete", { id });
   },
 
   exportTrace: (traceId: string) => get<Record<string, unknown>>(`/traces/${traceId}/export`),
 
-  branch: async (body: {
+  branch: (body: {
     source_trace_id: string;
     branch_point_span_id: string;
     mutation: { type: "tool_response"; span_id: string; value: string };
-  }): Promise<{ ok: boolean; stdout?: string[]; stderr?: string[]; error?: string }> => {
-    const res = await fetch(`${BASE}/branch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    return res.json();
-  },
+  }) =>
+    postJson<{ ok: boolean; stdout?: string[]; stderr?: string[]; error?: string }>(
+      "/branch",
+      body,
+    ),
+
+  // ---- Cloud Phase 2: auth + share -------------------------------------
+  signup: (body: { email: string; password: string; tenant_name?: string }) =>
+    postJson<{
+      token: string;
+      user_id: string;
+      tenant_id: string;
+      tenant_name: string;
+      api_key: string;
+      email: string;
+      detail?: string;
+    }>("/auth/signup", body),
+
+  login: (body: { email: string; password: string }) =>
+    postJson<{
+      token: string;
+      user_id: string;
+      tenant_id: string;
+      email: string;
+      role?: string;
+      api_key: string;
+      detail?: string;
+    }>("/auth/login", body),
+
+  me: () => get<{ user_id: string; tenant_id: string; role: string; exp: number }>("/auth/me"),
+
+  createShare: (traceId: string) =>
+    postJson<{ token: string; url: string; trace_id: string }>(
+      `/traces/${traceId}/share`,
+      {},
+    ),
+
+  getShare: (token: string) =>
+    get<Record<string, unknown>>(`/share/${token}`),
 };
