@@ -12,7 +12,6 @@ DuckDB to this, swap `tenancy.store_for` to return `PgStore(pool, tenant)`.
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from tools.ref_ingest.ids import ulid

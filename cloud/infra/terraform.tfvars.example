@@ -1,7 +1,25 @@
-# Copy to terraform.tfvars (gitignored) and fill in. Never commit secrets.
-region        = "us-east-1"
-project       = "stethoscope"
-image_tag     = "v1"
-db_username   = "stethoscope"
-db_password   = "CHANGE-ME-strong-password"
-desired_count = 1
+# Copy to terraform.tfvars (gitignored) and fill in. Required: db_password
+# and alert_email. Everything else has sane defaults.
+
+# Required.
+db_password = "CHANGE-ME-strong-password-min-12-chars"
+alert_email = "you@example.com"
+
+# Optional — flip when you're ready to demo / actually serve.
+# api_desired_count    = 1     # bring API up (1 task ~ 680 INR / mo)
+# worker_desired_count = 0     # leave at 0 unless customer-side runner is wired
+# api_max_count        = 4     # autoscaling ceiling
+
+# Optional — environment toggles.
+# environment = "dev"          # dev|staging|prod; prod enables deletion protection
+
+# Optional — bring-your-own domain. Skip = CloudFront's free *.cloudfront.net.
+# domain_name    = "stethoscope.example.com"
+# hosted_zone_id = "ZXXXXXXXXXXXX"
+
+# Optional — GitHub OIDC deploy role.
+# gh_repo = "paavan-mit-1234/stethoscope"
+
+# Optional — bigger DB for real workloads. Free Tier covers db.t3.micro.
+# db_instance_class = "db.t4g.small"
+# db_multi_az       = true

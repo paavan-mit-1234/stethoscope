@@ -35,11 +35,14 @@ apps/desktop/src-tauri/gen
 # Claude Code local agent settings (not project code)
 /.claude/
 
-# Cloud: never commit Terraform state or secrets
+# Cloud: never commit Terraform state, plans, or secrets
 *.tfstate
 *.tfstate.*
 .terraform/
 cloud/infra/terraform.tfvars
+cloud/infra/tfplan
+cloud/infra/plan.txt
+last-deploy-outputs.txt
 .stethoscope-cloud/
 
 # Editors / OS

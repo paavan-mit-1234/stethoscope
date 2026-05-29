@@ -55,6 +55,27 @@ jobs:
       - name: pytest
         run: pytest packages/sdk-python -q
 
+  cloud:
+    name: cloud api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install
+        run: |
+          pip install -r cloud/requirements.txt
+          pip install ruff pytest httpx
+      - name: ruff
+        run: ruff check cloud --line-length 100
+      - name: pytest
+        run: pytest cloud/tests tools/ref_ingest -q
+        env:
+          # Tests run against the DuckDB reference backend by default;
+          # no AWS / Postgres needed.
+          STETHOSCOPE_STORE: duckdb
+
   web:
     name: lint (biome)
     runs-on: ubuntu-latest

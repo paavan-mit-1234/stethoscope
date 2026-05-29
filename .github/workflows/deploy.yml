@@ -1,0 +1,200 @@
+# Cloud deploy. Triggered on push to main (after CI), and on manual dispatch.
+#
+# Auth: GitHub OIDC to the IAM role created by Terraform — no long-lived AWS
+# keys in this repo. The role ARN, ECR repo URL, ECS service/cluster names,
+# S3 UI bucket, CloudFront distribution ID, and the API base URL come from
+# repository variables / secrets that the operator sets *once* after the
+# first Terraform apply. Setup instructions live in cloud/RUNBOOK.md.
+#
+# Required repo VARIABLES (Settings → Secrets and variables → Variables):
+#   AWS_REGION                  e.g. ap-south-1
+#   AWS_ROLE_ARN                terraform output gh_deploy_role_arn
+#   ECR_REPOSITORY              terraform output ecr_repository_url
+#   ECS_CLUSTER                 terraform output ecs_cluster_name
+#   ECS_API_SERVICE             terraform output ecs_service_api
+#   ECS_WORKER_SERVICE          terraform output ecs_service_worker
+#   ECS_API_TASK_FAMILY         "<project>-<env>-api"   (matches TF)
+#   ECS_WORKER_TASK_FAMILY      "<project>-<env>-worker"
+#   UI_BUCKET                   terraform output ui_bucket
+#   CLOUDFRONT_DISTRIBUTION_ID  terraform output cloudfront_id  (add it)
+#   PUBLIC_API_URL              terraform output cloudfront_url
+#
+# No secrets needed — the role ARN is not sensitive, and OIDC handles auth.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cloud/**"
+      - "tools/**"
+      - "packages/ui/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "What to deploy"
+        required: true
+        default: "both"
+        type: choice
+        options: ["api", "ui", "both"]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---- API: build image, push to ECR, roll the Fargate service ----------
+  deploy-api:
+    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'api' || github.event.inputs.target == 'both' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gh-deploy-api-${{ github.run_id }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Compute image tag
+        id: tag
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push image
+        run: |
+          set -euo pipefail
+          docker build -f cloud/Dockerfile \
+            -t "${{ vars.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}" \
+            -t "${{ vars.ECR_REPOSITORY }}:latest" \
+            .
+          docker push "${{ vars.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}"
+          docker push "${{ vars.ECR_REPOSITORY }}:latest"
+
+      # Re-render the existing task definition with the new image tag and
+      # register a new revision. We do this for both API and worker since
+      # they share the image.
+      - name: Update API task definition
+        id: tdef-api
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ format('cloud/.tdef-api.json') }}
+          container-name: api
+          image: "${{ vars.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}"
+        # The previous step assumes cloud/.tdef-api.json exists; we generate
+        # it on the fly from the live task definition so we don't drift.
+        continue-on-error: true
+
+      - name: Pull live API task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "${{ vars.ECS_API_TASK_FAMILY }}" \
+            --query 'taskDefinition' \
+            > cloud/.tdef-api.json
+          # Strip read-only fields the register-task-definition rejects.
+          python -c "
+          import json, sys
+          d = json.load(open('cloud/.tdef-api.json'))
+          for k in ('taskDefinitionArn','revision','status','requiresAttributes','compatibilities','registeredAt','registeredBy'):
+              d.pop(k, None)
+          json.dump(d, open('cloud/.tdef-api.json','w'))
+          "
+
+      - name: Render new API task definition (real)
+        id: tdef-api-real
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: cloud/.tdef-api.json
+          container-name: api
+          image: "${{ vars.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}"
+
+      - name: Deploy API
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.tdef-api-real.outputs.task-definition }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          service: ${{ vars.ECS_API_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 10
+
+      # ---- worker (same image, different command) ----------------------
+      - name: Pull live worker task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "${{ vars.ECS_WORKER_TASK_FAMILY }}" \
+            --query 'taskDefinition' \
+            > cloud/.tdef-worker.json
+          python -c "
+          import json
+          d = json.load(open('cloud/.tdef-worker.json'))
+          for k in ('taskDefinitionArn','revision','status','requiresAttributes','compatibilities','registeredAt','registeredBy'):
+              d.pop(k, None)
+          json.dump(d, open('cloud/.tdef-worker.json','w'))
+          "
+
+      - name: Render worker task definition
+        id: tdef-worker
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: cloud/.tdef-worker.json
+          container-name: worker
+          image: "${{ vars.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}"
+
+      - name: Deploy worker
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.tdef-worker.outputs.task-definition }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          service: ${{ vars.ECS_WORKER_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 10
+
+  # ---- UI: build SPA, sync to S3, invalidate CloudFront ----------------
+  deploy-ui:
+    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'ui' || github.event.inputs.target == 'both' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile=false --filter @stethoscope/ui...
+
+      - name: Build
+        env:
+          # The UI talks to the same CloudFront URL — relative paths would
+          # work too, but env-driven keeps prod/staging interchangeable.
+          VITE_STETH_API: ${{ vars.PUBLIC_API_URL }}
+          VITE_STETH_CLOUD: "true"
+        run: pnpm --filter @stethoscope/ui build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gh-deploy-ui-${{ github.run_id }}
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync packages/ui/dist/ "s3://${{ vars.UI_BUCKET }}/" \
+            --delete --cache-control "public, max-age=300"
+          # index.html should not be cached aggressively; rewrite headers.
+          aws s3 cp packages/ui/dist/index.html "s3://${{ vars.UI_BUCKET }}/index.html" \
+            --cache-control "no-cache" --content-type "text/html"
+
+      - name: CloudFront invalidation
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/index.html" "/assets/*"

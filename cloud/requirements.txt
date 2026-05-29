@@ -1,7 +1,9 @@
 # Stethoscope Cloud API runtime deps.
 fastapi>=0.115
 uvicorn[standard]>=0.30
-duckdb>=1.1
+duckdb>=1.1                   # dev reference store
 opentelemetry-proto>=1.27
-psycopg[binary]>=3.2          # PgStore (cloud canon / RDS)
-PyJWT>=2.9                    # Cloud Phase 2 auth (HS256 + Cognito JWKS)
+psycopg[binary,pool]>=3.2     # PgStore + connection pool (RDS canon)
+PyJWT>=2.9                    # auth (HS256 + Cognito JWKS)
+cryptography>=43              # PyJWT RS256 dependency (Cognito)
+boto3>=1.35                   # S3 payload offload + SQS replay queue

@@ -28,10 +28,25 @@ _PBKDF2_ITERS = 200_000
 _JWT_ALGO = "HS256"
 _JWT_TTL = 24 * 3600
 
-# Server signing secret. Set STETHOSCOPE_JWT_SECRET in production (Secrets
-# Manager). The fallback random secret means sessions don't survive restart,
-# which is intentional for dev — set the env var to persist.
-_JWT_SECRET = os.environ.get("STETHOSCOPE_JWT_SECRET") or secrets.token_urlsafe(32)
+# Server signing secret. Required when STETHOSCOPE_ENV=prod (sourced from
+# Secrets Manager via the ECS task definition). In dev we fall back to a
+# random secret so the API boots without setup; sessions just don't survive
+# restart, which is intentional and visible at first login.
+def _load_jwt_secret() -> str:
+    explicit = os.environ.get("STETHOSCOPE_JWT_SECRET")
+    if explicit:
+        return explicit
+    if os.environ.get("STETHOSCOPE_ENV", "dev").lower() == "prod":
+        raise RuntimeError(
+            "STETHOSCOPE_JWT_SECRET is required when STETHOSCOPE_ENV=prod "
+            "(provision it via Secrets Manager and reference from the ECS "
+            "task definition). Refusing to start with an ephemeral key — it "
+            "would invalidate every session on each Fargate redeploy."
+        )
+    return secrets.token_urlsafe(32)
+
+
+_JWT_SECRET = _load_jwt_secret()
 
 
 # ---- password hashing (PBKDF2-HMAC-SHA256) -----------------------------
