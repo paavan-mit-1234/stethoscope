@@ -1,0 +1,18 @@
+# Workspace-wide cargo config.
+#
+# Why this file exists: libduckdb-sys (transitive dep of stethoscope-store
+# when the `bundled` feature is on) compiles DuckDB's C++ amalgamation via
+# the `cc` crate. On Windows + MSVC, the build script omits `/EHsc`, which
+# causes the re2 sub-library and several other TUs to fail to compile with
+# warning C4530 being promoted to errors. The cc crate honours
+# CXXFLAGS_<target> / CFLAGS_<target> environment variables, target-scoped
+# so they don't pollute Linux/macOS builds where /EHsc would be invalid.
+#
+# See docs/windows-build.md §DuckDB for the longer story.
+
+[env]
+CXXFLAGS_x86_64-pc-windows-msvc = "/EHsc"
+CFLAGS_x86_64-pc-windows-msvc   = "/EHsc"
+# i686 (32-bit) variant — same fix, just in case anyone builds 32-bit.
+CXXFLAGS_i686-pc-windows-msvc   = "/EHsc"
+CFLAGS_i686-pc-windows-msvc     = "/EHsc"

@@ -24,11 +24,26 @@ portable MinGW-w64.
 `stethoscope-store` links DuckDB. Two modes:
 
 - **`bundled` feature** — compiles DuckDB's C++ amalgamation. Correct but
-  heavy; needs a C++ compiler (the portable MinGW `g++`). Used in CI on
-  Linux/macOS/Windows.
+  heavy; needs a C++ compiler (the portable MinGW `g++`, or MSVC). Used
+  in CI on Linux/macOS/Windows. **Default path for local Windows builds**
+  since prebuilt `libduckdb.dll` distribution on Windows is awkward.
 - **default (no feature)** — links a prebuilt `libduckdb`. Set
   `DUCKDB_LIB_DIR` and `DUCKDB_INCLUDE_DIR` to a downloaded DuckDB release.
-  Preferred locally on Windows to avoid the long C++ compile.
+  Preferred on Linux/macOS where the package manager has it.
+
+### MSVC + bundled DuckDB on Windows: the `/EHsc` gotcha
+
+`libduckdb-sys`'s build script does not pass `/EHsc` to MSVC's `cl.exe`,
+which causes any C++ source that uses exceptions (re2's `bitstate.cc` is
+the first to bite) to fail with warning C4530 promoted to errors. The
+repo's `.cargo/config.toml` sets `CXXFLAGS_x86_64-pc-windows-msvc=/EHsc`
+target-scoped so this is invisible on non-Windows builds.
+
+If you ever delete that config file, the symptom is a wall of warnings
+during the DuckDB compile followed by `linking with link.exe failed:
+exit code: 1181, cannot open input file 'duckdb.lib'` — that message is
+misleading; the real failure is upstream cl.exe exit 2 on the missing
+exception-handling flag.
 
 See the project README for the end-to-end vertical-slice commands.
 
