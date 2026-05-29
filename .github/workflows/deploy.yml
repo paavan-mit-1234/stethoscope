@@ -51,7 +51,10 @@ concurrency:
 jobs:
   # ---- API: build image, push to ECR, roll the Fargate service ----------
   deploy-api:
-    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'api' || github.event.inputs.target == 'both' }}
+    # Skip until the operator has configured the repo variables from
+    # `terraform output` (see cloud/RUNBOOK.md §2). Without these, the AWS
+    # auth step errors immediately and the run is just noise.
+    if: ${{ vars.AWS_ROLE_ARN != '' && vars.ECR_REPOSITORY != '' && (github.event_name == 'push' || github.event.inputs.target == 'api' || github.event.inputs.target == 'both') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -159,7 +162,8 @@ jobs:
 
   # ---- UI: build SPA, sync to S3, invalidate CloudFront ----------------
   deploy-ui:
-    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'ui' || github.event.inputs.target == 'both' }}
+    # Same gate as deploy-api: silently skip until repo variables exist.
+    if: ${{ vars.AWS_ROLE_ARN != '' && vars.UI_BUCKET != '' && (github.event_name == 'push' || github.event.inputs.target == 'ui' || github.event.inputs.target == 'both') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
