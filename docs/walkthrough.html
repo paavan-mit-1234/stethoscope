@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stethoscope :: Project Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* Workbench tokens (PRD section 8.2) */
+  :root {
+    --chrome: #c0c0c0;
+    --chrome-dark: #808080;
+    --chrome-darker: #404040;
+    --window-bg: #d4d0c8;
+    --canvas: #ffffff;
+    --ink: #000000;
+    --selection: #000080;
+    --selection-text: #ffffff;
+    --signal-red: #c00000;
+    --signal-amber: #c08000;
+    --signal-green: #008000;
+    --signal-blue: #0000c0;
+    --phosphor: #00c800;
+    --hi: #ffffff;
+    --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+    --display: "Press Start 2P", "IBM Plex Mono", monospace;
+    --fs-s: 12px;
+    --fs-m: 14px;
+    --fs-l: 16px;
+    --lh: 1.45;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--mono);
+    font-size: var(--fs-m);
+    line-height: var(--lh);
+    color: var(--ink);
+    background: var(--window-bg);
+    -webkit-font-smoothing: none;
+  }
+
+  ::selection { background: var(--selection); color: var(--selection-text); }
+
+  /* Beveled panels */
+  .raised {
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--hi) var(--chrome-dark) var(--chrome-dark) var(--hi);
+  }
+  .sunken {
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
+  }
+  .raised-2 {
+    border-style: solid;
+    border-width: 2px;
+    border-color: var(--hi) var(--chrome-darker) var(--chrome-darker) var(--hi);
+  }
+  .sunken-2 {
+    border-style: solid;
+    border-width: 2px;
+    border-color: var(--chrome-darker) var(--hi) var(--hi) var(--chrome-darker);
+  }
+
+  /* Layout */
+  .app {
+    min-height: 100vh;
+    padding: 4px;
+    background: var(--window-bg);
+  }
+  .titlebar {
+    height: 24px;
+    padding: 0 4px;
+    background: var(--selection);
+    color: var(--selection-text);
+    font-family: var(--display);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .titlebar .dots {
+    display: inline-flex;
+    gap: 2px;
+    margin-left: auto;
+  }
+  .titlebar .dots span {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: var(--chrome);
+    border: 1px solid;
+    border-color: var(--hi) var(--chrome-dark) var(--chrome-dark) var(--hi);
+    text-align: center;
+    line-height: 14px;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .menubar {
+    height: 22px;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--chrome-dark);
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+  }
+  .menubar a { color: var(--ink); text-decoration: none; }
+  .menubar a:hover { background: var(--selection); color: var(--selection-text); padding: 0 4px; }
+
+  .wrap {
+    background: var(--canvas);
+    padding: 16px 24px;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--display);
+    color: var(--ink);
+    margin: 28px 0 12px;
+  }
+  h1 { font-size: 22px; line-height: 1.5; }
+  h2 {
+    font-size: 14px;
+    background: var(--selection);
+    color: var(--selection-text);
+    padding: 5px 8px;
+    margin: 32px 0 16px;
+  }
+  h3 { font-size: 11px; margin-top: 22px; }
+  h4 { font-size: 10px; margin-top: 16px; color: var(--signal-blue); }
+
+  p, li { font-size: 14px; }
+  p { margin: 8px 0 12px; }
+  ul, ol { padding-left: 22px; }
+
+  code, pre, kbd {
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  code {
+    background: var(--window-bg);
+    padding: 1px 4px;
+    border: 1px solid var(--chrome-dark);
+  }
+  pre {
+    background: var(--ink);
+    color: var(--phosphor);
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 12px 0;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
+  }
+  pre code { background: transparent; border: none; color: inherit; padding: 0; }
+  a { color: var(--signal-blue); }
+  a:hover { background: var(--signal-blue); color: var(--hi); text-decoration: none; }
+
+  .panel {
+    background: var(--window-bg);
+    padding: 16px;
+    margin: 14px 0;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--hi) var(--chrome-dark) var(--chrome-dark) var(--hi);
+  }
+  .panel-title {
+    font-family: var(--display);
+    font-size: 10px;
+    color: var(--signal-blue);
+    margin: -16px -16px 10px;
+    padding: 4px 10px;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--chrome-dark);
+  }
+
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 18px 0;
+  }
+  .pillar {
+    background: var(--window-bg);
+    padding: 14px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--hi) var(--chrome-dark) var(--chrome-dark) var(--hi);
+  }
+  .pillar h3 {
+    font-family: var(--display);
+    font-size: 11px;
+    margin: 0 0 8px;
+    color: var(--selection);
+  }
+  .pillar p { font-size: 13px; margin: 0; }
+
+  /* Status pill */
+  .pill {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--ink);
+    background: var(--chrome);
+    margin-right: 4px;
+  }
+  .pill.ok { background: var(--signal-green); color: var(--hi); border-color: var(--ink); }
+  .pill.warn { background: var(--signal-amber); color: var(--hi); }
+  .pill.err { background: var(--signal-red); color: var(--hi); }
+  .pill.info { background: var(--signal-blue); color: var(--hi); }
+  .pill.muted { background: var(--chrome); color: var(--ink); }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    background: var(--canvas);
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 6px 10px;
+    border: 1px solid var(--chrome-dark);
+    vertical-align: top;
+  }
+  th {
+    background: var(--chrome);
+    font-weight: 700;
+    font-family: var(--display);
+    font-size: 10px;
+  }
+
+  /* Commit timeline */
+  .commits {
+    margin: 18px 0;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
+    background: var(--canvas);
+  }
+  .commit {
+    display: grid;
+    grid-template-columns: 86px 70px 1fr;
+    padding: 8px 10px;
+    border-bottom: 1px dotted var(--chrome-dark);
+    font-size: 13px;
+    gap: 10px;
+  }
+  .commit:last-child { border-bottom: none; }
+  .commit .sha {
+    font-family: var(--mono);
+    color: var(--signal-blue);
+    font-weight: 700;
+  }
+  .commit .tag {
+    font-family: var(--display);
+    font-size: 9px;
+    color: var(--selection);
+    align-self: start;
+  }
+  .commit .msg { color: var(--ink); }
+
+  /* SVG diagrams */
+  svg.diagram {
+    display: block;
+    margin: 14px auto;
+    background: var(--canvas);
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+  }
+  svg.diagram text {
+    font-family: var(--mono);
+    font-size: 12px;
+    fill: var(--ink);
+  }
+  svg.diagram .label-disp {
+    font-family: var(--display);
+    font-size: 9px;
+  }
+  svg.diagram rect.box {
+    fill: var(--window-bg);
+    stroke: var(--ink);
+    stroke-width: 1;
+  }
+  svg.diagram rect.ok { fill: #d4f0d4; }
+  svg.diagram rect.fail { fill: #f4d0d0; }
+  svg.diagram rect.warn { fill: #f4e0c0; }
+  svg.diagram rect.info { fill: #d0d8f0; }
+  svg.diagram rect.canvas { fill: var(--canvas); }
+  svg.diagram path, svg.diagram line {
+    stroke: var(--ink);
+    stroke-width: 1;
+    fill: none;
+  }
+  svg.diagram .arrow { marker-end: url(#arrow); }
+  svg.diagram .dashed { stroke-dasharray: 4 3; }
+
+  .toc {
+    background: var(--chrome);
+    padding: 10px 14px;
+    margin: 14px 0;
+    columns: 2;
+    column-gap: 30px;
+  }
+  .toc h3 { margin-top: 0; column-span: all; }
+  .toc ol { margin: 0; padding-left: 22px; }
+  .toc li { padding: 1px 0; font-size: 13px; }
+
+  .statusbar {
+    height: 22px;
+    background: var(--chrome);
+    border-top: 1px solid var(--hi);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    font-size: 11px;
+    gap: 16px;
+  }
+  .statusbar .sep { color: var(--chrome-dark); }
+
+  .footer-note {
+    font-size: 11px;
+    color: var(--chrome-darker);
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  details {
+    background: var(--canvas);
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-style: solid;
+    border-width: 1px;
+    border-color: var(--chrome-dark) var(--hi) var(--hi) var(--chrome-dark);
+    font-size: 13px;
+  }
+  details summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-family: var(--display);
+    font-size: 10px;
+    color: var(--selection);
+  }
+
+  blockquote {
+    margin: 12px 0;
+    padding: 8px 14px;
+    background: var(--window-bg);
+    border-left: 4px solid var(--signal-amber);
+    font-size: 13px;
+  }
+
+  /* Responsive — collapse pillar grid on narrow screens */
+  @media (max-width: 720px) {
+    .pillars { grid-template-columns: 1fr; }
+    .toc { columns: 1; }
+    .wrap { padding: 10px 14px; }
+    .commit { grid-template-columns: 70px 1fr; }
+    .commit .tag { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Title bar -->
+<div class="titlebar">
+  <span>Stethoscope :: Project Walkthrough</span>
+  <span class="dots">
+    <span>_</span><span>&#9633;</span><span>x</span>
+  </span>
+</div>
+
+<!-- Menu bar -->
+<div class="menubar raised">
+  <a href="#premise">Premise</a>
+  <a href="#data-model">Data Model</a>
+  <a href="#capture">Capture</a>
+  <a href="#replay">Replay</a>
+  <a href="#rust-python">Spec/Ref</a>
+  <a href="#cloud">Cloud</a>
+  <a href="#journey">Journey</a>
+  <a href="#grim">The Grim Part</a>
+  <a href="#ci">CI</a>
+  <a href="#left">What's Left</a>
+</div>
+
+<div class="wrap raised">
+
+<h1>Stethoscope</h1>
+<p style="font-size:13px; margin-top:-6px;"><em>"Agents fail silently. We make them speak."</em></p>
+
+<p>A time-travel debugger for LangGraph agents. The kind of project that exists because the field is so new that nobody had built the gdb-equivalent yet. This document walks the entire codebase, the architecture decisions, every commit on the way, the production AWS deployment, and the parts that don't work yet.</p>
+
+<div class="toc panel">
+  <div class="panel-title">CONTENTS</div>
+  <ol>
+    <li><a href="#premise">The premise</a></li>
+    <li><a href="#pillars">The Three Pillars</a></li>
+    <li><a href="#data-model">The data model</a></li>
+    <li><a href="#capture">Local capture flow</a></li>
+    <li><a href="#workbench">The Workbench UI</a></li>
+    <li><a href="#replay">Replay, the actual point</a></li>
+    <li><a href="#diff">Diff</a></li>
+    <li><a href="#rust-python">Rust spec and Python reference</a></li>
+    <li><a href="#cloud">Cloud architecture</a></li>
+    <li><a href="#journey">The journey, commit by commit</a></li>
+    <li><a href="#grim">The grim part</a></li>
+    <li><a href="#ci">CI and tests</a></li>
+    <li><a href="#left">What's left</a></li>
+  </ol>
+</div>
+
+<!-- =================================================================== -->
+<h2 id="premise">1. The Premise</h2>
+
+<p>LLM agents fail silently. You wire up LangChain or LangGraph, give it tools, hand it a prompt, and it does something. When the something is wrong, you read OpenTelemetry spans in Jaeger or print statements in your terminal and squint at a wall of text. There is no equivalent of <em>rewind and try this with one input changed</em>, which is the central move of every debugger that came before.</p>
+
+<p>Stethoscope is what happens when you build that equivalent. It records every span the agent emits, stores them on disk, gives you a tree-shaped UI to step through, and lets you branch from any moment with a mutated input to see what would have happened. Then it lets you diff the two runs.</p>
+
+<p>That sentence is the whole product. The rest is making it actually work.</p>
+
+<h2 id="pillars">2. The Three Pillars</h2>
+
+<div class="pillars">
+  <div class="pillar">
+    <h3>OBSERVE</h3>
+    <p>See exactly what happened, at any granularity. Span tree, prompts, completions, tool inputs, tool outputs, token counts, cost. Everything the agent did, laid out so your eye can scan it.</p>
+  </div>
+  <div class="pillar">
+    <h3>REPLAY</h3>
+    <p>Re-run any moment with modifications. Pin every LLM response to what was recorded, override the one tool result you care about, and rerun the agent. New trace shows up as a fork of the original.</p>
+  </div>
+  <div class="pillar">
+    <h3>COMPARE</h3>
+    <p>Diff two runs to understand divergence. The alignment shows which spans match, which diverged, and which span is the actual cause of the different outcome.</p>
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<h2 id="data-model">3. The Data Model</h2>
+
+<p>Two ideas carry the whole system. A <strong>trace</strong> is one run of an agent from start to finish. A <strong>span</strong> is one operation inside that run. You have spans for LLM calls, tool calls, node executions, anything the agent did that you want to see.</p>
+
+<p>Spans nest. The agent's root span contains the planner's span, which contains the LLM call span. The trace tree in the UI walks parent and child relationships among spans, sorted by time. Each span carries timestamps, status, costs, tokens in and out, and the attributes the SDK attached.</p>
+
+<svg class="diagram" viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#000"/>
+    </marker>
+  </defs>
+  <text x="380" y="22" text-anchor="middle" class="label-disp">EXAMPLE SPAN TREE -- order-bot trace</text>
+
+  <rect class="box info" x="20" y="40" width="720" height="40"/>
+  <text x="35" y="65">order-bot (trace_run)</text>
+  <text x="600" y="65" font-size="11" fill="#c00000">status: failed</text>
+
+  <rect class="box" x="40" y="92" width="690" height="36"/>
+  <text x="55" y="115">planner (node_execution)</text>
+
+  <rect class="box info" x="60" y="138" width="660" height="32"/>
+  <text x="75" y="158">llm: claude-opus-4-7  (1.2s, 210→24 tok, $0.0031)</text>
+
+  <rect class="box" x="40" y="180" width="690" height="36"/>
+  <text x="55" y="203">tools (node_execution)</text>
+
+  <rect class="box warn" x="60" y="222" width="660" height="32"/>
+  <text x="75" y="242">tool: inventory_lookup  →  {"in_stock": false, "qty": 0}</text>
+
+  <rect class="box fail" x="40" y="266" width="690" height="40"/>
+  <text x="55" y="288">decide → place_order ERROR: cannot fulfill (out of stock)</text>
+</svg>
+
+<p>This is standard OpenTelemetry. The reason that matters is interoperability. Anyone instrumenting an agent with OTel can ship traces to Stethoscope. The SDK just gives them nicer convenience wrappers around the OTel API.</p>
+
+<div class="panel">
+  <div class="panel-title">SCHEMA AT A GLANCE</div>
+  <table>
+    <tr><th>Table</th><th>Holds</th><th>Where</th></tr>
+    <tr><td><code>traces</code></td><td>one row per run (label, status, costs, timestamps)</td><td>DuckDB local, Postgres cloud</td></tr>
+    <tr><td><code>spans</code></td><td>one row per operation inside a trace</td><td>same</td></tr>
+    <tr><td><code>messages</code></td><td>LLM prompt and completion messages</td><td>same</td></tr>
+    <tr><td><code>tool_calls</code></td><td>tool arguments and results</td><td>same</td></tr>
+    <tr><td><code>llm_cache</code></td><td>prompt hash → response, for replay</td><td>same</td></tr>
+    <tr><td><code>breakpoints</code></td><td>predicate DSL rules per project</td><td>same</td></tr>
+  </table>
+</div>
+
+<!-- =================================================================== -->
+<h2 id="capture">4. Local Capture Flow</h2>
+
+<p>Three pieces work together. The Python SDK is what an agent author imports. They call <code>stethoscope.attach(graph)</code> and the SDK wires OpenTelemetry into their LangGraph instance. Every node execution, every LLM call, every tool call becomes a span. The SDK ships those spans over OTLP/gRPC to wherever you've pointed it, default <code>localhost:4317</code>.</p>
+
+<svg class="diagram" viewBox="0 0 880 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="440" y="22" text-anchor="middle" class="label-disp">CAPTURE PATH -- agent to disk in ~50ms</text>
+
+  <!-- Agent process -->
+  <rect class="box info" x="20" y="50" width="220" height="140"/>
+  <text x="30" y="70" class="label-disp">AGENT PROCESS</text>
+  <text x="30" y="92">LangGraph instance</text>
+  <text x="30" y="112">stethoscope.attach(graph)</text>
+  <text x="30" y="132">↓</text>
+  <text x="30" y="152">OTLP gRPC exporter</text>
+  <text x="30" y="172">→ localhost:4317</text>
+
+  <!-- arrow -->
+  <line x1="240" y1="120" x2="320" y2="120" class="arrow"/>
+  <text x="280" y="110" text-anchor="middle" font-size="10">spans</text>
+
+  <!-- ingestion server -->
+  <rect class="box" x="320" y="50" width="240" height="140"/>
+  <text x="330" y="70" class="label-disp">INGESTION SERVER</text>
+  <text x="330" y="92">tools/ref_ingest</text>
+  <text x="330" y="112">gRPC :4317 (OTLP receiver)</text>
+  <text x="330" y="132">mapper.py (OTel → schema)</text>
+  <text x="330" y="152">HTTP :4318 (read API)</text>
+  <text x="330" y="172">single DuckDB connection</text>
+
+  <!-- arrow to store -->
+  <line x1="560" y1="120" x2="640" y2="120" class="arrow"/>
+  <text x="600" y="110" text-anchor="middle" font-size="10">SQL</text>
+
+  <!-- DuckDB store -->
+  <rect class="box warn" x="640" y="50" width="220" height="140"/>
+  <text x="650" y="70" class="label-disp">STORE</text>
+  <text x="650" y="92">DuckDB file</text>
+  <text x="650" y="112">~/.stethoscope/projects/</text>
+  <text x="650" y="132">    &lt;name&gt;/traces.db</text>
+  <text x="650" y="160">one project = one file</text>
+</svg>
+
+<p>The store at <code>~/.stethoscope/projects/&lt;name&gt;/traces.db</code> is DuckDB chosen because it is an embedded analytics database, fast for the kind of <em>give me all spans for this trace ordered by time</em> queries the UI does, and you do not have to run a separate server. One file per project keeps things simple.</p>
+
+<p>So when your agent runs, traces flow through the wire into a file on disk in about fifty milliseconds. That is the OBSERVE pillar working.</p>
+
+<details>
+  <summary>Try it locally (3 commands)</summary>
+  <pre><code># Terminal 1: install SDK + start the ingestion server
+pip install -e packages/sdk-python
+python -m tools.ref_ingest serve
+
+# Terminal 2: run the example agent
+python examples/replayable_agent/agent.py
+
+# Terminal 3: check it landed
+curl http://127.0.0.1:4318/traces</code></pre>
+</details>
+
+<!-- =================================================================== -->
+<h2 id="workbench">5. The Workbench UI</h2>
+
+<p><code>packages/ui</code> is a React app that talks to the read API the ingestion server exposes on 4318. It has three panes. Left is a list of traces. Middle is the span tree for whichever trace you selected. Right is the inspector, which shows everything about whichever span you clicked.</p>
+
+<p>The UI is deliberately ugly. Hand-rolled CSS, IBM Plex Mono, Press Start 2P for headers. The README's <em>"an interface that feels like debugging C in 1998"</em> line is the aesthetic. The reason is that LLM tooling in 2026 is almost all chat-shaped, which is the wrong shape for debugging. You want dense information laid out so your eye can scan it.</p>
+
+<div class="panel">
+  <div class="panel-title">COMPONENT MAP</div>
+  <table>
+    <tr><th>File</th><th>Role</th></tr>
+    <tr><td><code>TitleBar.tsx</code></td><td>top bar with the Stethoscope wordmark</td></tr>
+    <tr><td><code>MenuBar.tsx</code></td><td>File / Edit / View / Trace / Help</td></tr>
+    <tr><td><code>Toolbar.tsx</code></td><td>step, branch, diff, compare buttons</td></tr>
+    <tr><td><code>panes/TraceTree.tsx</code></td><td>middle pane — span tree</td></tr>
+    <tr><td><code>panes/Inspector.tsx</code></td><td>right pane — span details</td></tr>
+    <tr><td><code>panes/DiffView.tsx</code></td><td>two-trace diff view</td></tr>
+    <tr><td><code>panes/CommandBar.tsx</code></td><td>gdb-style bottom command line</td></tr>
+    <tr><td><code>panes/TokenStream.tsx</code></td><td>live LLM stream viewer (Phase 3)</td></tr>
+    <tr><td><code>panes/StateWatcher.tsx</code></td><td>graph state at each span (Phase 4)</td></tr>
+    <tr><td><code>BranchModal.tsx</code></td><td>modal for picking a mutation</td></tr>
+    <tr><td><code>LoginModal.tsx</code></td><td>cloud-mode auth wall (Cloud Phase 2)</td></tr>
+  </table>
+</div>
+
+<!-- =================================================================== -->
+<h2 id="replay">6. Replay, The Actual Point</h2>
+
+<p>The killer feature is branching. You see a span where the agent did something dumb. You think, "what if that tool had returned the right thing instead." You click branch, edit the tool result, and the system replays the agent from that span with everything else pinned.</p>
+
+<svg class="diagram" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+  <text x="440" y="22" text-anchor="middle" class="label-disp">BRANCH AND REPLAY</text>
+
+  <!-- Original trace -->
+  <rect class="box info" x="20" y="50" width="200" height="220"/>
+  <text x="30" y="70" class="label-disp">ORIGINAL TRACE</text>
+  <rect class="box" x="40" y="82" width="160" height="24"/>
+  <text x="50" y="99" font-size="11">planner / llm</text>
+  <rect class="box warn" x="40" y="112" width="160" height="24"/>
+  <text x="50" y="129" font-size="11">tool:inventory_lookup</text>
+  <text x="50" y="148" font-size="10" fill="#c00000">in_stock: false ← bug</text>
+  <rect class="box fail" x="40" y="158" width="160" height="24"/>
+  <text x="50" y="175" font-size="11">decide → ERROR</text>
+
+  <!-- step 1 arrow -->
+  <line x1="220" y1="125" x2="290" y2="125" class="arrow"/>
+  <text x="255" y="118" text-anchor="middle" font-size="9">user clicks branch</text>
+
+  <!-- Manifest -->
+  <rect class="box" x="290" y="60" width="220" height="180"/>
+  <text x="300" y="80" class="label-disp">MANIFEST (json)</text>
+  <text x="300" y="100" font-size="11">parent_trace_id: T1</text>
+  <text x="300" y="118" font-size="11">branch_point_span_id: S2</text>
+  <text x="300" y="138" font-size="11">llm: { hash → response }</text>
+  <text x="300" y="156" font-size="11">tools: {</text>
+  <text x="310" y="174" font-size="11">  "inventory_lookup":</text>
+  <text x="320" y="192" font-size="11" fill="#008000">    {"in_stock": true,</text>
+  <text x="320" y="208" font-size="11" fill="#008000">     "qty": 1}</text>
+  <text x="310" y="226" font-size="11">}</text>
+
+  <!-- step 2 arrow -->
+  <line x1="510" y1="125" x2="580" y2="125" class="arrow"/>
+  <text x="545" y="118" text-anchor="middle" font-size="9">subprocess</text>
+
+  <!-- Replayed trace -->
+  <rect class="box info" x="580" y="50" width="200" height="220"/>
+  <text x="590" y="70" class="label-disp">REPLAYED TRACE</text>
+  <rect class="box ok" x="600" y="82" width="160" height="24"/>
+  <text x="610" y="99" font-size="11">planner / llm (cache hit)</text>
+  <rect class="box ok" x="600" y="112" width="160" height="24"/>
+  <text x="610" y="129" font-size="11">tool:inventory_lookup</text>
+  <text x="610" y="148" font-size="10" fill="#008000">in_stock: true ← edit</text>
+  <rect class="box ok" x="600" y="158" width="160" height="24"/>
+  <text x="610" y="175" font-size="11">decide / llm: confirm</text>
+  <rect class="box ok" x="600" y="188" width="160" height="24"/>
+  <text x="610" y="205" font-size="11">SUCCESS</text>
+
+  <!-- Diff arrow -->
+  <line x1="120" y1="290" x2="680" y2="290" class="arrow"/>
+  <text x="400" y="280" text-anchor="middle" font-size="11">diff: only inventory_lookup changed, everything downstream is a consequence</text>
+</svg>
+
+<p>The replay engine (<code>tools/ref_replay</code>) builds a manifest. That manifest says <em>for this span the LLM should return this exact completion, for this tool span the tool result is this overridden value</em>. It runs the agent's entrypoint as a subprocess with the manifest in an environment variable. The agent code in <code>examples/replayable_agent/agent.py</code> checks for that env var and uses the recorded responses instead of calling the real LLM or tool. New spans flow back through OTLP, get stored, and show up in the UI as a fork of the original trace.</p>
+
+<p>For this to work, the agent has to be deterministic given the same inputs. That is why the example agent uses a fake LLM and a fake tool. Real agents are mostly deterministic once you pin the LLM responses, which Stethoscope does by storing every prompt's hash and response. PRD section 7.3 explains the cache. Section 4.3 explains why structural hashing beats byte-level hashing in practice.</p>
+
+<!-- =================================================================== -->
+<h2 id="diff">7. Diff</h2>
+
+<p>If you have two traces, you can diff them. <code>crates/diff</code> and its Python mirror align the two span trees, mark which spans are identical, which diverged, and where exactly the agent took a different branch. The DiffView pane shows them side by side with color coding.</p>
+
+<p>In the killer demo, you diff the original failed <code>order-bot</code> run against the replayed successful one. The visualization shows the <code>inventory_lookup</code> span as the only changed input, and everything downstream as a consequence of that change. That is a clean <em>one variable changed, here is the blast radius</em> story which is exactly what scientific debugging is.</p>
+
+<!-- =================================================================== -->
+<h2 id="rust-python">8. Rust Spec and Python Reference</h2>
+
+<p>The architecture is intentionally double-implemented. The Rust crates are the canonical spec. The Python tools are a runnable reference. Same schemas, same mapper logic, same store semantics, same wire format.</p>
+
+<svg class="diagram" viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="380" y="22" text-anchor="middle" class="label-disp">TWO IMPLEMENTATIONS, ONE CONTRACT</text>
+
+  <!-- Rust column -->
+  <rect class="box warn" x="40" y="48" width="320" height="170"/>
+  <text x="50" y="68" class="label-disp">CANONICAL — RUST CRATES</text>
+  <text x="50" y="92" font-size="12">stethoscope-store    (DuckDB)</text>
+  <text x="50" y="110" font-size="12">stethoscope-ingestion (OTLP gRPC)</text>
+  <text x="50" y="128" font-size="12">stethoscope-replay   (manifest + run)</text>
+  <text x="50" y="146" font-size="12">stethoscope-diff     (alignment)</text>
+  <text x="50" y="164" font-size="12">stethoscope-breakpoint (predicate DSL)</text>
+  <text x="50" y="182" font-size="12">stethoscope-cli      (gdb verbs)</text>
+  <text x="50" y="200" font-size="12">apps/desktop/src-tauri (Tauri 2 shell)</text>
+
+  <!-- Python column -->
+  <rect class="box info" x="400" y="48" width="320" height="170"/>
+  <text x="410" y="68" class="label-disp">REFERENCE — PYTHON TOOLS</text>
+  <text x="410" y="92" font-size="12">tools/ref_ingest        (mirror of ingestion)</text>
+  <text x="410" y="110" font-size="12">tools/ref_replay        (mirror of replay)</text>
+  <text x="410" y="128" font-size="12">packages/sdk-python     (instrumentation)</text>
+  <text x="410" y="146" font-size="12">packages/ui             (React frontend)</text>
+  <text x="410" y="164" font-size="12">cloud/api               (FastAPI cloud)</text>
+  <text x="410" y="192" font-size="12" fill="#008000">  same DuckDB schema, same OTel mapping</text>
+</svg>
+
+<p>The reason is that the project started on a machine without admin rights to install a Rust toolchain. The Python reference let you ship and verify the whole vertical slice in one language while leaving the Rust crates as the production target. As of v3.x the Rust workspace builds and tests cleanly on Linux and macOS through CI, with documented Windows quirks.</p>
+
+<p>The cargo workspace excludes the Tauri shell because pulling in WebView2 makes the test build heavy. When you ever want to ship a real Stethoscope desktop binary, the Tauri shell calls into the Rust crates over IPC and you get one signed executable per OS. The Python tools become test fixtures and developer ergonomics.</p>
+
+<!-- =================================================================== -->
+<h2 id="cloud">9. Cloud Architecture</h2>
+
+<p><code>cloud/api</code> is the same logic running as a multi-tenant FastAPI service. Every row in Postgres carries a <code>tenant_id</code>. The API key in the <code>X-Stethoscope-Key</code> header maps to a tenant. An agent in any customer's environment can ship traces to your hosted endpoint and only see its own traces back. Cognito handles human user auth for the Workbench login. JWT tokens for sessions, long-lived API keys for programmatic agent traffic.</p>
+
+<svg class="diagram" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+  <text x="450" y="22" text-anchor="middle" class="label-disp">CLOUD ARCHITECTURE -- AWS ap-south-1</text>
+
+  <!-- Internet zone -->
+  <rect class="box canvas" x="20" y="40" width="200" height="160"/>
+  <text x="30" y="60" class="label-disp">INTERNET</text>
+  <rect class="box info" x="40" y="78" width="160" height="40"/>
+  <text x="50" y="102">LLM Agent + SDK</text>
+  <rect class="box info" x="40" y="128" width="160" height="40"/>
+  <text x="50" y="152">Workbench (browser)</text>
+
+  <!-- Edge -->
+  <rect class="box warn" x="250" y="40" width="160" height="80"/>
+  <text x="260" y="60" class="label-disp">EDGE</text>
+  <text x="260" y="82">CloudFront</text>
+  <text x="260" y="100">HTTPS, free *.cloudfront.net</text>
+
+  <!-- ALB -->
+  <rect class="box warn" x="250" y="140" width="160" height="60"/>
+  <text x="260" y="160" class="label-disp">ALB</text>
+  <text x="260" y="180">CF secret header gate</text>
+  <text x="260" y="195">direct = 403</text>
+
+  <!-- VPC -->
+  <rect x="440" y="40" width="440" height="320" fill="none" stroke="#000" stroke-dasharray="4 3"/>
+  <text x="450" y="58" class="label-disp">VPC (10.20.0.0/16, 2 AZ)</text>
+
+  <!-- Private subnet box -->
+  <rect class="box canvas" x="450" y="70" width="420" height="280"/>
+  <text x="460" y="88" class="label-disp">PRIVATE SUBNETS</text>
+
+  <rect class="box info" x="470" y="100" width="180" height="60"/>
+  <text x="480" y="120" class="label-disp">FARGATE / API</text>
+  <text x="480" y="140">FastAPI + uvicorn</text>
+  <text x="480" y="155">autoscale 1→4 @ 60% CPU</text>
+
+  <rect class="box info" x="470" y="170" width="180" height="50"/>
+  <text x="480" y="190" class="label-disp">FARGATE / WORKER</text>
+  <text x="480" y="210">SQS poller (stubbed)</text>
+
+  <rect class="box warn" x="670" y="100" width="180" height="60"/>
+  <text x="680" y="120" class="label-disp">RDS POSTGRES</text>
+  <text x="680" y="140">db.t3.micro (Free Tier)</text>
+  <text x="680" y="155">tenant_id on every row</text>
+
+  <rect class="box" x="670" y="170" width="180" height="50"/>
+  <text x="680" y="190" class="label-disp">SQS</text>
+  <text x="680" y="210">replay queue + DLQ</text>
+
+  <rect class="box warn" x="470" y="230" width="180" height="50"/>
+  <text x="480" y="250" class="label-disp">SECRETS MANAGER</text>
+  <text x="480" y="270">DB url, JWT, admin token</text>
+
+  <rect class="box warn" x="670" y="230" width="180" height="50"/>
+  <text x="680" y="250" class="label-disp">COGNITO</text>
+  <text x="680" y="270">user pool + JWKS</text>
+
+  <rect class="box" x="470" y="290" width="180" height="50"/>
+  <text x="480" y="310" class="label-disp">S3 PAYLOADS</text>
+  <text x="480" y="328">Glacier after 90d</text>
+
+  <rect class="box" x="670" y="290" width="180" height="50"/>
+  <text x="680" y="310" class="label-disp">S3 / UI SPA</text>
+  <text x="680" y="328">CloudFront OAC</text>
+
+  <!-- Arrows -->
+  <line x1="220" y1="98" x2="250" y2="80" class="arrow"/>
+  <line x1="220" y1="148" x2="250" y2="80" class="arrow"/>
+  <line x1="330" y1="120" x2="330" y2="140" class="arrow"/>
+  <line x1="410" y1="170" x2="470" y2="130" class="arrow"/>
+  <line x1="650" y1="130" x2="670" y2="130" class="arrow"/>
+
+  <!-- Off-side: monitoring -->
+  <rect class="box" x="20" y="240" width="200" height="120"/>
+  <text x="30" y="258" class="label-disp">MONITORING</text>
+  <text x="30" y="280" font-size="12">CloudWatch alarms</text>
+  <text x="30" y="298" font-size="12">  ALB 5xx / RDS CPU /</text>
+  <text x="30" y="316" font-size="12">  ECS CPU / SQS DLQ</text>
+  <text x="30" y="334" font-size="12">AWS Budgets ($5 / $20)</text>
+  <text x="30" y="352" font-size="12">SNS → email</text>
+
+  <!-- Footnote -->
+  <text x="20" y="400" font-size="11">CI/CD: GitHub OIDC → IAM role → ECR push → ECS update-service → S3 sync → CloudFront invalidation</text>
+  <text x="20" y="420" font-size="11">Defaults: api_desired_count=0 (scale to zero), apply/destroy cycle in cloud/RUNBOOK.md</text>
+  <text x="20" y="440" font-size="11" fill="#c00000">Cost when idle (after first apply): ~₹140/day. Tear down between sessions.</text>
+</svg>
+
+<p>The cloud architecture put up on AWS is exactly what the Mermaid diagram in the README shows. CloudFront fronts everything for free TLS. ALB lives behind it with a secret-header check so direct ALB traffic gets 403'd. ECS Fargate runs the FastAPI app and, separately, the replay worker. RDS Postgres sits in private subnets. SQS holds replay jobs. S3 carries large payloads. Cognito stores users. CloudWatch alarms and AWS Budgets so you don't accidentally bankrupt yourself.</p>
+
+<div class="panel">
+  <div class="panel-title">TERRAFORM FILE MAP (cloud/infra/)</div>
+  <table>
+    <tr><th>File</th><th>What it provisions</th></tr>
+    <tr><td><code>versions.tf</code></td><td>provider versions, us-east-1 alias for CloudFront ACM</td></tr>
+    <tr><td><code>locals.tf</code></td><td>name prefixes, common tags, conditional gating</td></tr>
+    <tr><td><code>variables.tf</code></td><td>region, env, password, alert email, sizing knobs</td></tr>
+    <tr><td><code>vpc.tf</code></td><td>VPC + 4 subnets + IGW + NAT + 3 SGs</td></tr>
+    <tr><td><code>iam.tf</code></td><td>task exec role, task role, GH OIDC deploy role</td></tr>
+    <tr><td><code>ecr.tf</code></td><td>image repo + retention lifecycle</td></tr>
+    <tr><td><code>s3.tf</code></td><td>payloads bucket + UI bucket + OAC policy</td></tr>
+    <tr><td><code>secrets.tf</code></td><td>DB url, JWT secret, admin token, CF origin secret</td></tr>
+    <tr><td><code>rds.tf</code></td><td>Postgres instance + parameter group + subnet group</td></tr>
+    <tr><td><code>sqs.tf</code></td><td>replay queue + DLQ + redrive</td></tr>
+    <tr><td><code>ecs_api.tf</code></td><td>cluster, ALB, target group, API task def + service, autoscaling</td></tr>
+    <tr><td><code>ecs_worker.tf</code></td><td>worker task def + service (desired_count=0 by default)</td></tr>
+    <tr><td><code>cognito.tf</code></td><td>user pool + client + hosted UI domain + custom tenant_id</td></tr>
+    <tr><td><code>cloudfront.tf</code></td><td>CF distribution + ACM cert + OAC + cache behaviors</td></tr>
+    <tr><td><code>monitoring.tf</code></td><td>SNS topic, 4 CloudWatch alarms, 2 AWS Budgets</td></tr>
+    <tr><td><code>outputs.tf</code></td><td>CF url, ECR repo, ECS service names, ARNs</td></tr>
+  </table>
+</div>
+
+<p>70 resources from a clean apply. About 10 minutes to bring everything up, about 6 minutes to tear it all down. Total cost for a full demo apply, screenshot, destroy cycle is roughly ₹40 in AWS credits. Full procedure is in <a href="../cloud/RUNBOOK.md">cloud/RUNBOOK.md</a>.</p>
+
+<p>The honest gap. The cloud replay worker cannot actually run a customer's agent because the customer's source code is not on your server. There is a stub that logs the request and returns 501, plus the SQS queue and worker task definition so the shape is right for a portfolio review. The workaround for a real Stethoscope-as-a-service would be a customer-side runner that subscribes to the replay queue. Documented in the RUNBOOK.</p>
+
+<!-- =================================================================== -->
+<h2 id="journey">10. The Journey, Commit by Commit</h2>
+
+<p>Reverse chronological order, latest first. Every commit on <code>main</code>.</p>
+
+<div class="commits">
+
+  <div class="commit">
+    <span class="sha">b1ba21a</span>
+    <span class="tag">DOCS</span>
+    <span class="msg">README cloud architecture section + AWS demo screenshots. Mermaid diagram, screenshots of ECS / CloudFront / RDS / Cognito running, deploy + destroy one-liner.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">937b5bb</span>
+    <span class="tag">TF FIX</span>
+    <span class="msg">Conditional Repo tag. AWS Application Auto Scaling rejects empty tag values. Made Repo tag conditional on gh_repo being non-empty.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">5946c5c</span>
+    <span class="tag">RUST</span>
+    <span class="msg">cargo fmt --all. Whitespace cleanup across 9 files so the rust fmt step in CI stops failing.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">6415e72</span>
+    <span class="tag">CI</span>
+    <span class="msg">Rust no longer informational. Removed continue-on-error from Linux + macOS Rust jobs. Windows stays informational because of the cc-rs / lib.exe race documented in windows-build.md.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">7e18c73</span>
+    <span class="tag">RUST</span>
+    <span class="msg">Fix clippy::match_result_ok in store::ensure_project. First real clippy lint surfaced once cargo clippy actually ran on Linux. if let Some(id) = ... .ok() became if let Ok(id) = ....</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">dfc0dd5</span>
+    <span class="tag">v3.2</span>
+    <span class="msg">Rust update. .cargo/config.toml sets CXXFLAGS_x86_64-pc-windows-msvc=/EHsc so libduckdb-sys's amalgamation actually compiles under MSVC. docs/windows-build.md captures the gotcha for future readers.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">ec5bce8</span>
+    <span class="tag">v3.1</span>
+    <span class="msg">Gate deploy jobs on repo variables. Deploy workflow now silently skips when AWS_ROLE_ARN / ECR_REPOSITORY / UI_BUCKET aren't set, so PRs that haven't bootstrapped AWS don't show false reds. Also added the lazy grpc import fix in tools/ref_ingest/__init__.py so the cloud CI job can import the package without grpcio.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">234c85d</span>
+    <span class="tag">v3.0</span>
+    <span class="msg">Hardened API + production Terraform + CI/CD deploy. The big one. 36 files changed, 3276 insertions. Cloud Phases 1+2+3 land here in a single commit: env-driven Postgres backend swap, fail-fast JWT secret in prod, env CORS, admin-gated /tenants, S3 payload offload decorator, SQS worker stub, 16 new pytest tests. 11 .tf files provisioning the full prod-shape stack. .github/workflows/deploy.yml for OIDC ECR push + ECS rolling deploy + S3 sync + CloudFront invalidation. cloud/RUNBOOK.md with the full deploy + teardown procedure.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">f47b82e</span>
+    <span class="tag">v2.1</span>
+    <span class="msg">Tiny LoginModal + API client follow-ups for the cloud auth flow added in v2.0.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">36ebcc7</span>
+    <span class="tag">v2.0</span>
+    <span class="msg">Initial cloud Phase 2 work. Signup / login / share-link endpoints. auth.py with PBKDF2 + HS256 JWT, plus auth_cognito.py with Cognito JWKS verifier as the production auth backend. Workbench gained LoginModal.tsx and cloud.ts session helpers.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">810c1ca</span>
+    <span class="tag">v1.3</span>
+    <span class="msg">CI tweak. ci.yml extended to handle the Rust + Python + TypeScript mix with appropriate continue-on-error flags before the Rust toolchain was available locally.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">23f2db6</span>
+    <span class="tag">v1.2</span>
+    <span class="msg">PRD section 4.11 .steth bundle export and shareable link plumbing on the embedded store.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">adb7328</span>
+    <span class="tag">v1.1</span>
+    <span class="msg">Phase 7 breakpoints. Predicate DSL + breakpoint table + hit recording. crates/breakpoint mirrors the Python ref.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">8c8be6f</span>
+    <span class="tag">v1.0</span>
+    <span class="msg">v1.0 feature-complete. All PRD phases 0-7 land in the canonical Rust crates + Python reference: capture, inspect, gdb-style step, branch/replay, diff, breakpoints.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">c692c9a</span>
+    <span class="tag">META</span>
+    <span class="msg">Point repository / homepage URLs at the real GitHub account.</span>
+  </div>
+
+  <div class="commit">
+    <span class="sha">b536485</span>
+    <span class="tag">v0</span>
+    <span class="msg">Phase 0 scaffold + Phase 1 trace-capture vertical slice. Monorepo skeleton (Rust workspace + pnpm workspace + Python SDK), DuckDB store, OTLP gRPC ingest, OTel → Stethoscope mapping. The first thing that ran end to end.</span>
+  </div>
+
+</div>
+
+<!-- =================================================================== -->
+<h2 id="grim">11. The Grim Part</h2>
+
+<p>Everything that does not make the screenshot.</p>
+
+<h3>Norton 360 vs cargo target</h3>
+
+<p>Norton 360 treats Rust's <code>target/</code> directory as a malware factory. It holds files open while it scans them. cc-rs needs to write to those files at the same time. You get link errors that look like the linker cannot find a library, when actually the linker cannot open a file the antivirus is reading. The workaround is to add Norton exclusions for <code>target/</code> and <code>~/.cargo/</code>. The real fix is to leave Windows entirely and build in WSL.</p>
+
+<h3>libduckdb-sys on MSVC without /EHsc</h3>
+
+<p>DuckDB's Rust bindings on Windows MSVC don't pass <code>/EHsc</code> to the C++ compiler. Half the standard library uses exceptions. The build dies on an unrelated-looking link error about <code>duckdb.lib</code> not existing. The actual fix is one line in <code>.cargo/config.toml</code> setting <code>CXXFLAGS_x86_64-pc-windows-msvc=/EHsc</code>. Finding it took ninety minutes.</p>
+
+<h3>AWS retired Postgres 16.4</h3>
+
+<p>AWS retired Postgres 16.4 in <code>ap-south-1</code> two weeks before this project tried to use it. Pin to the major version and AWS picks the latest patch. Five minutes of debugging for a Terraform edit.</p>
+
+<h3>Em dashes in Security Group descriptions</h3>
+
+<p>You cannot use an em dash in an AWS Security Group description. The error message is <code>"Character sets beyond ASCII are not supported."</code> Learned this from inside a thirty-second window where the NAT gateway was the only thing running, ticking at ₹3 per hour.</p>
+
+<h3>ECS lifecycle ignore_changes vs first deploy</h3>
+
+<p>The ECS service has <code>lifecycle { ignore_changes = [task_definition, desired_count] }</code> so GitHub Actions deploys do not get rolled back by a subsequent terraform apply. But on a fresh first deploy, the service stays pointed at the bootstrap task definition revision while terraform creates a new revision with the real image tag. Symptom: <code>CannotPullContainerError: stethoscope-api:bootstrap not found</code>. Fix: manually <code>aws ecs update-service --task-definition $LATEST --force-new-deployment</code>, which is exactly what the deploy workflow would have done.</p>
+
+<h3>AAS tag values cannot be empty</h3>
+
+<p>The provider <code>default_tags</code> in versions.tf set <code>Repo = var.gh_repo</code>. When you leave <code>gh_repo</code> empty in tfvars, every other resource accepts an empty tag, but Application Auto Scaling refuses. Fix: <code>merge({...}, var.gh_repo == "" ? {} : { Repo = var.gh_repo })</code>.</p>
+
+<h3>PowerShell pipe ECR login</h3>
+
+<p>PowerShell's pipe encodes the password with an extra newline or BOM that Docker's stdin reader chokes on. <code>aws ecr get-login-password ... | docker login --password-stdin ...</code> fails with HTTP 400 from ECR. Workaround: store the token in a variable and pass via <code>--password</code> directly, or use <code>cmd /c</code> to bypass PowerShell's pipe.</p>
+
+<h3>The apply-destroy cycle</h3>
+
+<blockquote>
+Production-shaped portfolio work lives or dies on the apply-destroy cycle. Anyone can draw boxes. The skill people actually care about is whether you remembered to <code>terraform destroy</code> before bed.
+</blockquote>
+
+<p>CloudFront takes three minutes to provision and another three to delete. RDS takes seven. Most of an AWS Saturday is waiting.</p>
+
+<!-- =================================================================== -->
+<h2 id="ci">12. CI and Tests</h2>
+
+<p>Six jobs run on every push to main and on every PR. Five gate, one is informational.</p>
+
+<table>
+  <tr><th>Job</th><th>What it does</th><th>Status</th></tr>
+  <tr><td><code>python sdk</code></td><td>ruff + pytest on packages/sdk-python</td><td><span class="pill ok">gating green</span></td></tr>
+  <tr><td><code>cloud api</code></td><td>ruff + pytest on cloud/tests (16 tests) + tools/ref_ingest (6 tests)</td><td><span class="pill ok">gating green</span></td></tr>
+  <tr><td><code>lint (biome)</code></td><td>biome format check on the TS workspace</td><td><span class="pill ok">gating green</span></td></tr>
+  <tr><td><code>rust ubuntu-latest</code></td><td>cargo fmt + clippy + test on workspace (10 tests)</td><td><span class="pill ok">gating green</span></td></tr>
+  <tr><td><code>rust macos-latest</code></td><td>same matrix entry</td><td><span class="pill ok">gating green</span></td></tr>
+  <tr><td><code>rust windows-latest</code></td><td>same, but continue-on-error true</td><td><span class="pill warn">informational</span></td></tr>
+</table>
+
+<p>Total verified tests across the project right now is 32. The deploy workflow uses GitHub OIDC, so the only AWS config in the repo is the role ARN as a repository variable. No long-lived AWS secret keys anywhere. When a PR doesn't have those variables set, deploy jobs silently skip rather than fail noisily.</p>
+
+<!-- =================================================================== -->
+<h2 id="left">13. What's Left</h2>
+
+<ul>
+  <li><strong>Replay in cloud needs a customer-side runner story.</strong> The worker is a stub. Real implementation needs a per-tenant CLI that subscribes to SQS, runs the agent locally, and ships traces back.</li>
+  <li><strong>The Tauri desktop shell compiles</strong> but has not been launched with a real <code>pnpm tauri dev</code> end to end. WebView2 on Windows and webkit2gtk on Linux both work for <code>cargo check</code>; full GUI run is the next step.</li>
+  <li><strong>The Workbench is functional but spartan.</strong> The state watcher and live token stream panes are wired but not richly populated yet.</li>
+  <li><strong>The replay engine handles tool_response mutations.</strong> The other mutation types in PRD section 5 (llm_message, state_patch, condition) are spec'd but not wired in the reference.</li>
+  <li><strong>There is no paying-customer auth flow.</strong> Cognito user pool exists, signup works, but there is no billing or plan tier.</li>
+  <li><strong>The Windows Rust test failure</strong> in <code>stethoscope-diff</code> on the CI Windows matrix entry is almost certainly a CRLF vs LF issue in an expected-output literal. Trivial fix once you grab the CI log.</li>
+</ul>
+
+<p>Everything else works.</p>
+
+<div class="footer-note">
+  <p>
+    Repo: <a href="https://github.com/paavan-mit-1234/stethoscope">github.com/paavan-mit-1234/stethoscope</a>
+    &nbsp;|&nbsp;
+    <a href="../README.md">README</a>
+    &nbsp;|&nbsp;
+    <a href="../cloud/RUNBOOK.md">RUNBOOK</a>
+    &nbsp;|&nbsp;
+    <a href="windows-build.md">Windows build notes</a>
+  </p>
+  <p>MIT &copy; 2026 Paavan Sejpal &nbsp;&middot;&nbsp; Built with <em>too many em dashes that AWS rejected</em>.</p>
+</div>
+
+</div>
+<!-- /.wrap -->
+
+<!-- Status bar -->
+<div class="statusbar raised">
+  <span>Ready</span>
+  <span class="sep">|</span>
+  <span>UTF-8</span>
+  <span class="sep">|</span>
+  <span>Ln 1, Col 1</span>
+  <span class="sep">|</span>
+  <span style="margin-left:auto;">Stethoscope v3.x</span>
+</div>
+
+</div>
+<!-- /.app -->
+
+</body>
+</html>
