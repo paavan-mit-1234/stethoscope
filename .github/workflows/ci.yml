@@ -6,24 +6,22 @@ on:
   pull_request:
 
 jobs:
-  # The Rust crates are the project's CANONICAL spec but have never been
-  # compiled (authored on a locked-down machine with no Rust toolchain — see
-  # docs/windows-build.md). The verified, working path is the Python/TS
-  # reference, gated by the `python sdk` + `lint (biome)` jobs below.
+  # Rust canonical workspace. As of v3.x the crates build + clippy + test
+  # cleanly on Linux; CI now gates on them like any other job.
   #
-  # Each Rust step is `continue-on-error: true` so the job still RUNS (logs
-  # show fmt/clippy/test output for anyone who looks) but CONCLUDES green —
-  # job-level continue-on-error alone leaves each matrix job rendered as a
-  # failing check. This is honest: the failures are visible in the step
-  # logs and the job is named "informational"; it just doesn't gate the
-  # commit. Drop the `continue-on-error` lines once built in a real Rust env.
+  # Windows-only note: libduckdb-sys + MSVC + huge archives hit a
+  # cc-rs/lib.exe race that's documented in docs/windows-build.md, plus the
+  # CI runner doesn't have Norton getting in the way — so windows-latest in
+  # this matrix is the canary for upstream regressions, not a developer
+  # blocker. We keep it informational on Windows for now.
   rust:
-    name: rust canonical — informational, builds when a toolchain is available (${{ matrix.os }})
+    name: rust ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -31,13 +29,10 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: fmt
-        continue-on-error: true
         run: cargo fmt --all -- --check
       - name: clippy
-        continue-on-error: true
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --features stethoscope-store/bundled -- -D warnings
       - name: test
-        continue-on-error: true
         run: cargo test --workspace --features stethoscope-store/bundled
 
   python:
