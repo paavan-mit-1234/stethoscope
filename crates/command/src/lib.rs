@@ -117,13 +117,19 @@ mod tests {
 
     #[test]
     fn diff_args_optional() {
-        assert_eq!(parse("diff a b").unwrap(), Command::Diff("a".into(), "b".into()));
+        assert_eq!(
+            parse("diff a b").unwrap(),
+            Command::Diff("a".into(), "b".into())
+        );
         assert_eq!(parse("diff").unwrap(), Command::Diff("".into(), "".into()));
     }
 
     #[test]
     fn unknown_is_reported() {
-        assert_eq!(parse("frobnicate"), Err(ParseError::Unknown("frobnicate".into())));
+        assert_eq!(
+            parse("frobnicate"),
+            Err(ParseError::Unknown("frobnicate".into()))
+        );
         assert_eq!(parse("  "), Err(ParseError::Empty));
     }
 }

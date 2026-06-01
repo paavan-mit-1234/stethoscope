@@ -81,23 +81,43 @@ pub fn align_spans(a: &[SpanRow], b: &[SpanRow]) -> Vec<AlignedPair> {
             } else {
                 AlignKind::Equal
             };
-            out.push(AlignedPair { kind, a: Some(sa), b: Some(sb) });
+            out.push(AlignedPair {
+                kind,
+                a: Some(sa),
+                b: Some(sb),
+            });
             i += 1;
             j += 1;
         } else if dp[i + 1][j] >= dp[i][j + 1] {
-            out.push(AlignedPair { kind: AlignKind::Removed, a: Some(a[i].clone()), b: None });
+            out.push(AlignedPair {
+                kind: AlignKind::Removed,
+                a: Some(a[i].clone()),
+                b: None,
+            });
             i += 1;
         } else {
-            out.push(AlignedPair { kind: AlignKind::Added, a: None, b: Some(b[j].clone()) });
+            out.push(AlignedPair {
+                kind: AlignKind::Added,
+                a: None,
+                b: Some(b[j].clone()),
+            });
             j += 1;
         }
     }
     while i < n {
-        out.push(AlignedPair { kind: AlignKind::Removed, a: Some(a[i].clone()), b: None });
+        out.push(AlignedPair {
+            kind: AlignKind::Removed,
+            a: Some(a[i].clone()),
+            b: None,
+        });
         i += 1;
     }
     while j < m {
-        out.push(AlignedPair { kind: AlignKind::Added, a: None, b: Some(b[j].clone()) });
+        out.push(AlignedPair {
+            kind: AlignKind::Added,
+            a: None,
+            b: Some(b[j].clone()),
+        });
         j += 1;
     }
     out
@@ -118,8 +138,7 @@ pub struct Seg {
 pub fn word_diff(a: &str, b: &str) -> Vec<Seg> {
     use similar::{ChangeTag, TextDiff};
     let diff = TextDiff::from_words(a, b);
-    diff
-        .iter_all_changes()
+    diff.iter_all_changes()
         .map(|c| Seg {
             op: match c.tag() {
                 ChangeTag::Equal => '=',

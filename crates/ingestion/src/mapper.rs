@@ -12,8 +12,7 @@ use opentelemetry_proto::tonic::common::v1::KeyValue;
 use opentelemetry_proto::tonic::trace::v1::Span as OtelSpan;
 use std::collections::HashMap;
 use stethoscope_store::{
-    span_kind, trace_status, LlmCacheEntry, NewMessage, NewSpan, NewToolCall,
-    NewTrace, Store,
+    span_kind, trace_status, LlmCacheEntry, NewMessage, NewSpan, NewToolCall, NewTrace, Store,
 };
 use ulid::Ulid;
 
@@ -85,22 +84,23 @@ fn map_span(trace_id: &str, s: &OtelSpan) -> NewSpan {
         prompt_hash: get_str(a, "stethoscope.prompt_hash").map(String::from),
         cacheable: get_bool(a, "stethoscope.cacheable"),
         redacted: get_bool(a, "stethoscope.redacted").unwrap_or(false),
-        attributes_json: Some(
-            serde_json::Value::Object(attrs_map(a)).to_string(),
-        ),
+        attributes_json: Some(serde_json::Value::Object(attrs_map(a)).to_string()),
     }
 }
 
 fn extract_messages(span_id: &str, a: &[KeyValue]) -> Vec<NewMessage> {
     let mut out = Vec::new();
     let mut seq = 0;
-    for (prefix, default_role) in
-        [("gen_ai.prompt", "user"), ("gen_ai.completion", "assistant")]
-    {
+    for (prefix, default_role) in [
+        ("gen_ai.prompt", "user"),
+        ("gen_ai.completion", "assistant"),
+    ] {
         let mut i = 0;
         loop {
             let ck = format!("{prefix}.{i}.content");
-            let Some(content) = get_str(a, &ck) else { break };
+            let Some(content) = get_str(a, &ck) else {
+                break;
+            };
             let role = get_str(a, &format!("{prefix}.{i}.role"))
                 .unwrap_or(default_role)
                 .to_string();
@@ -111,8 +111,7 @@ fn extract_messages(span_id: &str, a: &[KeyValue]) -> Vec<NewMessage> {
                 role,
                 content_ref: None,
                 content_inline: Some(content.to_string()),
-                tool_call_id: get_str(a, &format!("{prefix}.{i}.tool_call_id"))
-                    .map(String::from),
+                tool_call_id: get_str(a, &format!("{prefix}.{i}.tool_call_id")).map(String::from),
                 metadata_json: None,
             });
             seq += 1;
@@ -123,8 +122,8 @@ fn extract_messages(span_id: &str, a: &[KeyValue]) -> Vec<NewMessage> {
 }
 
 fn extract_tool_call(span_id: &str, a: &[KeyValue]) -> Option<NewToolCall> {
-    let tool_name = get_str(a, "gen_ai.tool.name")
-        .or_else(|| get_str(a, "stethoscope.tool_name"))?;
+    let tool_name =
+        get_str(a, "gen_ai.tool.name").or_else(|| get_str(a, "stethoscope.tool_name"))?;
     Some(NewToolCall {
         span_id: span_id.to_string(),
         tool_name: tool_name.to_string(),
@@ -151,8 +150,7 @@ pub fn ingest_request(store: &Store, req: &ExportTraceServiceRequest) -> Result<
             .or_else(|| get_str(res_attrs, "service.name"))
             .unwrap_or("default");
         let project_id = store.ensure_project(project_name)?;
-        let framework = get_str(res_attrs, "stethoscope.framework")
-            .map(String::from);
+        let framework = get_str(res_attrs, "stethoscope.framework").map(String::from);
         let framework_version =
             get_str(res_attrs, "stethoscope.framework_version").map(String::from);
 
@@ -200,9 +198,7 @@ pub fn ingest_request(store: &Store, req: &ExportTraceServiceRequest) -> Result<
                 if let Some(p) = get_str(&sp.attributes, "stethoscope.parent_trace_id") {
                     parent_trace_id = Some(p.to_string());
                 }
-                if let Some(b) =
-                    get_str(&sp.attributes, "stethoscope.branch_point_span_id")
-                {
+                if let Some(b) = get_str(&sp.attributes, "stethoscope.branch_point_span_id") {
                     branch_point = Some(b.to_string());
                 }
             }
@@ -244,18 +240,14 @@ pub fn ingest_request(store: &Store, req: &ExportTraceServiceRequest) -> Result<
                 // Replay cache (PRD 7.3): pin deterministic LLM responses.
                 if mapped.kind == span_kind::LLM_CALL {
                     if let Some(hash) = &mapped.prompt_hash {
-                        if let Some(resp) =
-                            get_str(&sp.attributes, "gen_ai.completion.0.content")
-                        {
+                        if let Some(resp) = get_str(&sp.attributes, "gen_ai.completion.0.content") {
                             store.upsert_llm_cache(&LlmCacheEntry {
                                 prompt_hash: hash.clone(),
                                 model: mapped.model.clone(),
                                 response_ref: resp.to_string(),
                                 tokens_in: mapped.tokens_in,
                                 tokens_out: mapped.tokens_out,
-                                captured_at: mapped
-                                    .started_at
-                                    .unwrap_or_else(Utc::now),
+                                captured_at: mapped.started_at.unwrap_or_else(Utc::now),
                             })?;
                         }
                     }

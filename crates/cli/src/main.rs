@@ -10,7 +10,11 @@ use stethoscope_ingestion::{default_db_path, run_server, DEFAULT_OTLP_ADDR};
 use stethoscope_store::Store;
 
 #[derive(Parser)]
-#[command(name = "stethoscope", version, about = "Time-travel debugger for LLM agents")]
+#[command(
+    name = "stethoscope",
+    version,
+    about = "Time-travel debugger for LLM agents"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -47,8 +51,8 @@ fn db_or_default(db: Option<PathBuf>) -> PathBuf {
 
 fn cmd_list_traces(project: Option<String>, db: Option<PathBuf>) -> Result<()> {
     let path = db_or_default(db);
-    let store = Store::open(&path)
-        .with_context(|| format!("opening store at {}", path.display()))?;
+    let store =
+        Store::open(&path).with_context(|| format!("opening store at {}", path.display()))?;
 
     let project_id = match project.as_deref() {
         Some(name) => Some(
@@ -70,8 +74,16 @@ fn cmd_list_traces(project: Option<String>, db: Option<PathBuf>) -> Result<()> {
 
     let mut table = Table::new();
     table.load_preset(ASCII_FULL).set_header(vec![
-        "TRACE ID", "LABEL", "STATUS", "SPANS", "TOK IN", "TOK OUT", "COST $",
-        "FRAMEWORK", "STARTED", "BRANCH",
+        "TRACE ID",
+        "LABEL",
+        "STATUS",
+        "SPANS",
+        "TOK IN",
+        "TOK OUT",
+        "COST $",
+        "FRAMEWORK",
+        "STARTED",
+        "BRANCH",
     ]);
     for t in &traces {
         table.add_row(vec![
@@ -110,16 +122,13 @@ fn cmd_projects(db: Option<PathBuf>) -> Result<()> {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
     match Cli::parse().command {
         Command::ListTraces { project, db } => cmd_list_traces(project, db),
         Command::Projects { db } => cmd_projects(db),
-        Command::Serve { addr, db } => {
-            run_server(addr, db_or_default(db)).await
-        }
+        Command::Serve { addr, db } => run_server(addr, db_or_default(db)).await,
     }
 }

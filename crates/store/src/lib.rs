@@ -14,8 +14,8 @@ use duckdb::{params, Connection};
 use ulid::Ulid;
 
 pub use models::{
-    BreakpointRow, LlmCacheEntry, MessageRow, NewMessage, NewSpan, NewToolCall,
-    NewTrace, SpanRow, ToolCallRow, TraceRow,
+    BreakpointRow, LlmCacheEntry, MessageRow, NewMessage, NewSpan, NewToolCall, NewTrace, SpanRow,
+    ToolCallRow, TraceRow,
 };
 pub use schema::{span_kind, trace_status, SCHEMA_SQL};
 
@@ -323,10 +323,7 @@ impl Store {
     }
 
     pub fn get_span(&self, span_id: &str) -> Result<Option<SpanRow>> {
-        let sql = format!(
-            "SELECT {} FROM spans WHERE id = ? LIMIT 1",
-            Self::SPAN_COLS
-        );
+        let sql = format!("SELECT {} FROM spans WHERE id = ? LIMIT 1", Self::SPAN_COLS);
         let mut stmt = self.conn.prepare(&sql)?;
         let mut rows = stmt
             .query_map(params![span_id], Self::map_span_row)?
@@ -431,12 +428,7 @@ impl Store {
         Ok(rows)
     }
 
-    pub fn record_breakpoint_hit(
-        &self,
-        id: &str,
-        span_id: &str,
-        trace_id: &str,
-    ) -> Result<()> {
+    pub fn record_breakpoint_hit(&self, id: &str, span_id: &str, trace_id: &str) -> Result<()> {
         self.conn
             .execute(
                 "UPDATE breakpoints SET hit_count = hit_count + 1, \

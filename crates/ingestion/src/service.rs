@@ -3,8 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use opentelemetry_proto::tonic::collector::trace::v1::{
-    trace_service_server::TraceService, ExportTraceServiceRequest,
-    ExportTraceServiceResponse,
+    trace_service_server::TraceService, ExportTraceServiceRequest, ExportTraceServiceResponse,
 };
 use stethoscope_store::Store;
 use tonic::{Request, Response, Status};
@@ -35,7 +34,9 @@ impl TraceService for StethoscopeTraceService {
 
         // DuckDB writes are blocking; keep them off the async reactor.
         let count = tokio::task::spawn_blocking(move || {
-            let guard = store.lock().map_err(|_| "store mutex poisoned".to_string())?;
+            let guard = store
+                .lock()
+                .map_err(|_| "store mutex poisoned".to_string())?;
             ingest_request(&guard, &req).map_err(|e| e.to_string())
         })
         .await

@@ -108,7 +108,11 @@ pub enum Expr {
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
-    Cmp { field: String, op: String, val: Value },
+    Cmp {
+        field: String,
+        op: String,
+        val: Value,
+    },
 }
 
 struct P {
@@ -218,9 +222,7 @@ pub fn evaluate(e: &Expr, ctx: &Ctx) -> bool {
         Expr::And(a, b) => evaluate(a, ctx) && evaluate(b, ctx),
         Expr::Or(a, b) => evaluate(a, ctx) || evaluate(b, ctx),
         Expr::Not(x) => !evaluate(x, ctx),
-        Expr::Cmp { field, op, val } => {
-            cmp(ctx.get(field).unwrap_or(&Value::Null), op, val)
-        }
+        Expr::Cmp { field, op, val } => cmp(ctx.get(field).unwrap_or(&Value::Null), op, val),
     }
 }
 
@@ -239,10 +241,8 @@ mod tests {
 
     #[test]
     fn prd_example_predicate() {
-        let e = parse(
-            "kind=='tool_call' AND tool_name=='web_search' AND duration_ms > 5000",
-        )
-        .unwrap();
+        let e =
+            parse("kind=='tool_call' AND tool_name=='web_search' AND duration_ms > 5000").unwrap();
         assert!(evaluate(&e, &ctx()));
     }
 
@@ -253,7 +253,10 @@ mod tests {
             &parse("status=='error' OR kind=='tool_call'").unwrap(),
             &ctx()
         ));
-        assert!(evaluate(&parse("tool_name contains 'search'").unwrap(), &ctx()));
+        assert!(evaluate(
+            &parse("tool_name contains 'search'").unwrap(),
+            &ctx()
+        ));
         assert!(!evaluate(&parse("duration_ms < 100").unwrap(), &ctx()));
     }
 

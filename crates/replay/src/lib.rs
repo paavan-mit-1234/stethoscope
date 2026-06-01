@@ -26,9 +26,18 @@ pub enum ReplayError {
 pub enum Mutation {
     UserMessage(String),
     SystemPrompt(String),
-    ToolResponse { span_id: String, result: String },
-    StateValue { key: String, value: serde_json::Value },
-    ModelParam { name: String, value: serde_json::Value },
+    ToolResponse {
+        span_id: String,
+        result: String,
+    },
+    StateValue {
+        key: String,
+        value: serde_json::Value,
+    },
+    ModelParam {
+        name: String,
+        value: serde_json::Value,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
