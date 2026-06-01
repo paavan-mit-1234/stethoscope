@@ -52,15 +52,11 @@ impl Store {
 
     /// Return the id of the project named `name`, creating it if absent.
     pub fn ensure_project(&self, name: &str) -> Result<String> {
-        if let Some(id) = self
-            .conn
-            .query_row(
-                "SELECT id FROM projects WHERE name = ? LIMIT 1",
-                params![name],
-                |r| r.get::<_, String>(0),
-            )
-            .ok()
-        {
+        if let Ok(id) = self.conn.query_row(
+            "SELECT id FROM projects WHERE name = ? LIMIT 1",
+            params![name],
+            |r| r.get::<_, String>(0),
+        ) {
             return Ok(id);
         }
         let id = Ulid::new().to_string();

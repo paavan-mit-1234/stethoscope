@@ -2,6 +2,10 @@
 /target
 **/target
 Cargo.lock.orig
+# Cargo build/clippy logs from interactive sessions
+cargo-build.log
+clippy.log
+test.log
 
 # Node
 node_modules
