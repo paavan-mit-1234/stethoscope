@@ -5,12 +5,16 @@
 locals {
   name_prefix = "${var.project}-${var.environment}"
 
-  common_tags = {
-    Project     = var.project
-    Environment = var.environment
-    ManagedBy   = "terraform"
-    Repo        = var.gh_repo
-  }
+  # AWS Application Auto Scaling rejects empty tag values, so the Repo
+  # tag is added only when var.gh_repo is non-empty.
+  common_tags = merge(
+    {
+      Project     = var.project
+      Environment = var.environment
+      ManagedBy   = "terraform"
+    },
+    var.gh_repo == "" ? {} : { Repo = var.gh_repo }
+  )
 
   is_prod            = var.environment == "prod"
   use_custom_domain  = var.domain_name != ""
