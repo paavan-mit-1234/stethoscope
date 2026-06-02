@@ -6,14 +6,12 @@ on:
   pull_request:
 
 jobs:
-  # Rust canonical workspace. As of v3.x the crates build + clippy + test
-  # cleanly on Linux; CI now gates on them like any other job.
-  #
-  # Windows-only note: libduckdb-sys + MSVC + huge archives hit a
-  # cc-rs/lib.exe race that's documented in docs/windows-build.md, plus the
-  # CI runner doesn't have Norton getting in the way — so windows-latest in
-  # this matrix is the canary for upstream regressions, not a developer
-  # blocker. We keep it informational on Windows for now.
+  # Rust canonical workspace. Build + clippy + test on all three OSes.
+  # Two Windows-specific quirks live in .cargo/config.toml:
+  #   - /EHsc for libduckdb-sys's C++ compile (warning C4530 → error)
+  #   - Rstrtmgr.lib link arg for DuckDB's AdditionalLockInfo helper
+  # Ubuntu needs a pre-build disk cleanup step (see below) because the
+  # bundled DuckDB compile fills the runner's default 14 GB free space.
   rust:
     name: rust ${{ matrix.os }}
     strategy:
@@ -21,9 +19,25 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - uses: actions/checkout@v4
+
+      # Ubuntu's ~14GB free disk isn't enough for a debug build of DuckDB's
+      # bundled C++ amalgamation plus rustc debuginfo for the workspace.
+      # Nuke the pre-installed .NET / Android / GHC / CodeQL junk to reclaim
+      # ~25GB before the cargo cache + build land here.
+      - name: Free disk space (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo rm -rf /usr/local/share/boost || true
+          docker system prune -af || true
+          df -h
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
